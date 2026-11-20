@@ -1,7 +1,6 @@
 -- Shared Activity Tracker — database & security (Phase 1)
 -- Paste into the Supabase SQL editor. Idempotent: safe to run repeatedly.
--- Before running, replace the two UUID placeholders in section 8 with the
--- user IDs from Auth > Users.
+-- The two user IDs in section 8 come from Auth > Users (Samarth, Shreyasi).
 
 -- ───────────────────────────────────────────────────────────────────
 -- 1. Allow-list
@@ -185,16 +184,14 @@ end $$;
 
 -- ───────────────────────────────────────────────────────────────────
 -- 8. Seed: the two members and their profiles
---    Replace both placeholders with the UUIDs from Auth > Users.
---    (Left as-is, the cast fails and the script stops — on purpose.)
 -- ───────────────────────────────────────────────────────────────────
 insert into public.members (user_id) values
-  ('REPLACE_WITH_SAMARTH_UUID'::uuid),
-  ('REPLACE_WITH_SHREYASI_UUID'::uuid)
+  ('e060e48b-67fe-4964-ad78-a7e1162987da'::uuid),
+  ('3a56ca00-b170-4fc8-9f2b-89ff693a85ec'::uuid)
 on conflict do nothing;
 
 insert into public.profiles (id, display_name, theme) values
-  ('REPLACE_WITH_SAMARTH_UUID'::uuid,  'Samarth',  'a'),
-  ('REPLACE_WITH_SHREYASI_UUID'::uuid, 'Shreyasi', 'b')
+  ('e060e48b-67fe-4964-ad78-a7e1162987da'::uuid,  'Samarth',  'a'),
+  ('3a56ca00-b170-4fc8-9f2b-89ff693a85ec'::uuid, 'Shreyasi', 'b')
 on conflict (id) do update
   set display_name = excluded.display_name;
