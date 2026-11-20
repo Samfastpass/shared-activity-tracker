@@ -3,16 +3,20 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <meta name="theme-color" content="#111113">
+  <meta name="theme-color" content="#121114">
   <meta name="robots" content="noindex, nofollow">
-  <title>Shared Activities</title>
+  <title>Our Activities</title>
+  <link rel="preload" href="fonts/nunito-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="fonts/fraunces-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/fonts.css">
   <link rel="stylesheet" href="css/themes.css">
   <link rel="stylesheet" href="css/base.css">
 </head>
 <body>
   <main id="login-view" class="login" hidden>
     <form id="login-form" class="login-card" autocomplete="on">
-      <h1>Shared Activities</h1>
+      <h1>Our Activities <span class="heart" aria-hidden="true">♥</span></h1>
+      <p class="tagline muted">Just for the two of us</p>
       <label>Email <input name="email" type="email" autocomplete="username" required></label>
       <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
       <button class="btn primary" type="submit">Sign in</button>
@@ -22,7 +26,7 @@
 
   <div id="app-view" hidden>
     <header class="topbar">
-      <h1>Activities</h1>
+      <h1>Our Activities <span class="heart" aria-hidden="true">♥</span></h1>
       <span id="whoami" class="muted"></span>
       <button id="sign-out" class="link" type="button">Sign out</button>
     </header>
@@ -34,13 +38,13 @@
 
     <dialog id="composer" class="sheet">
       <form method="dialog" class="composer">
-        <h2>New activity</h2>
-        <label>Title <input name="title" type="text" maxlength="200" required></label>
-        <label>Details <textarea name="body" rows="4" maxlength="10000"></textarea></label>
+        <h2>Share something new <span class="heart" aria-hidden="true">♡</span></h2>
+        <label>Title <input name="title" type="text" maxlength="200" placeholder="What did we get up to?" required></label>
+        <label>Details <textarea name="body" rows="4" maxlength="10000" placeholder="Tell the story (optional)"></textarea></label>
         <label>Date <input name="happened_at" type="date" required></label>
         <div class="row">
           <button class="btn" type="button" data-cancel>Cancel</button>
-          <button class="btn primary" type="submit">Post</button>
+          <button class="btn primary" type="submit">Share</button>
         </div>
       </form>
     </dialog>

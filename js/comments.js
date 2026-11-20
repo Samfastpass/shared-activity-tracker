@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { el, toast } from './dom.js';
+import { el, toast, avatar } from './dom.js';
 
 export async function loadComments(activityId) {
   const { data, error } = await supabase
@@ -58,8 +58,9 @@ function commentRow(c, ctx, onDelete) {
   const mine = c.author_id === ctx.me.id;
   return el('div', { class: 'comment', 'data-author-theme': author?.theme || '' },
     el('div', { class: 'comment-head' },
+      avatar(author, true),
       el('strong', {}, author?.display_name || 'Someone'),
-      el('span', { class: 'muted' }, ' · ', new Date(c.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })),
+      el('span', { class: 'muted when' }, new Date(c.created_at).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })),
       mine && el('button', { class: 'link', type: 'button', onclick: onDelete, 'aria-label': 'Delete comment' }, 'Delete')),
     el('p', { class: 'comment-body' }, c.body));
 }

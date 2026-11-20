@@ -1,5 +1,5 @@
 import { supabase } from './supabase.js';
-import { el, formatDate, toast } from './dom.js';
+import { el, formatDate, toast, avatar } from './dom.js';
 import { mountComments } from './comments.js';
 import { deleteActivity } from './activity.js';
 
@@ -50,7 +50,7 @@ export function createFeed({ container, moreButton, ctx }) {
 }
 
 function emptyState() {
-  return el('div', { class: 'empty' }, el('p', {}, 'Nothing here yet.'), el('p', { class: 'muted' }, 'Tap + to share the first activity.'));
+  return el('div', { class: 'empty' }, el('span', { class: 'heart', 'aria-hidden': 'true' }, '♡'), el('p', {}, 'Nothing here yet.'), el('p', { class: 'muted' }, 'Tap + to share your first little moment.'));
 }
 
 function renderCard(a, ctx, reload) {
@@ -83,6 +83,7 @@ function renderCard(a, ctx, reload) {
 
   return el('article', { class: 'card', 'data-author-theme': author?.theme || '' },
     el('header', { class: 'card-head' },
+      avatar(author),
       el('strong', { class: 'author' }, author?.display_name || 'Someone'),
       el('time', { class: 'muted', datetime: a.happened_at }, formatDate(a.happened_at))),
     el('h2', { class: 'card-title' }, a.title),

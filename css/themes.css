@@ -1,30 +1,40 @@
-/* Themes are pure variable sets. Keys match profiles.theme. */
+/* Themes are pure variable sets. Keys match profiles.theme.
+   Mood: soft, rounded and a little romantic, but mostly clean. */
 
 /* Neutral — login screen and anything outside a theme */
 :root {
-  --bg: #111113; --surface: #1a1a1d; --surface-2: #232327;
-  --text: #f1f1f3; --muted: #9a9aa3; --border: #2e2e33;
-  --accent: #8a8aff; --highlight: #8a8aff; --on-accent: #0b0b14;
-  --radius: 12px;
-  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --bg: #121114; --surface: #1b1a1f; --surface-2: #26242b;
+  --text: #f4f2f6; --muted: #aaa6b2; --border: #34313b;
+  --accent: #b9a7ff; --highlight: #ffb3d1; --on-accent: #15101f;
+  --radius: 18px;
+  --shadow: 0 6px 22px rgb(0 0 0 / .35);
+  --bg-glow: radial-gradient(60rem 28rem at 50% -8rem, rgb(185 167 255 / .12), transparent 70%);
+  --font: "Nunito", ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
 }
 
 /* a — Samarth: black, red accent, orange highlights */
 [data-theme="a"] {
-  --bg: #0a0a0b; --surface: #151517; --surface-2: #1f1f22;
-  --text: #f4f4f5; --muted: #a1a1aa; --border: #2a2a2e;
-  --accent: #e5242b; --highlight: #ff8a1f; --on-accent: #ffffff;
-  --radius: 8px;
+  --bg: #0b0a0b; --surface: #161416; --surface-2: #211d20;
+  --text: #f7f3f3; --muted: #ada3a6; --border: #2e282b;
+  --accent: #ff5f6d; --highlight: #ffa04a; --on-accent: #1a0306;
+  --radius: 16px;
+  --shadow: 0 6px 22px rgb(0 0 0 / .5);
+  --bg-glow: radial-gradient(60rem 28rem at 85% -8rem, rgb(255 95 109 / .16), transparent 70%),
+             radial-gradient(40rem 22rem at 0% 0%, rgb(255 160 74 / .08), transparent 70%);
 }
 
-/* b — Shreyasi: maroon with teal */
+/* b — Shreyasi: maroon with teal, a soft rose for highlights */
 [data-theme="b"] {
-  --bg: #1c0b11; --surface: #2a1219; --surface-2: #371820;
-  --text: #f7edef; --muted: #c4a4ab; --border: #4a2430;
-  --accent: #1fb5ad; --highlight: #d8506f; --on-accent: #04201f;
-  --radius: 16px;
+  --bg: #1f0b13; --surface: #2f1321; --surface-2: #3b1a2b;
+  --text: #fcf1f4; --muted: #d0aeb8; --border: #532739;
+  --accent: #3fcdc2; --highlight: #ff93ab; --on-accent: #04201e;
+  --radius: 22px;
+  --shadow: 0 6px 22px rgb(20 0 8 / .5);
+  --bg-glow: radial-gradient(60rem 28rem at 15% -8rem, rgb(63 205 194 / .14), transparent 70%),
+             radial-gradient(40rem 22rem at 100% 0%, rgb(255 147 171 / .09), transparent 70%);
 }
 
 /* Cards/comments are tinted by their AUTHOR's accent, whoever is viewing. */
-[data-author-theme="a"] { --author-accent: #e5242b; }
-[data-author-theme="b"] { --author-accent: #1fb5ad; }
+[data-author-theme="a"] { --author-accent: #ff5f6d; }
+[data-author-theme="b"] { --author-accent: #3fcdc2; }
