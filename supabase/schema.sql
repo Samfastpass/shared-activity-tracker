@@ -131,6 +131,16 @@ begin
 end $$;
 
 -- ───────────────────────────────────────────────────────────────────
+-- 5b. Table privileges
+--    New Supabase projects don't auto-grant Data API access on new tables,
+--    so grant it explicitly. Only `authenticated` gets access (RLS above then
+--    narrows it to the two members); `anon` and `members` get nothing.
+-- ───────────────────────────────────────────────────────────────────
+revoke all on public.members, public.profiles, public.activities, public.photos, public.comments from anon;
+revoke all on public.members from authenticated;
+grant select, insert, update, delete on public.profiles, public.activities, public.photos, public.comments to authenticated;
+
+-- ───────────────────────────────────────────────────────────────────
 -- 6. Storage: private `photos` bucket, ~5 MB, images only
 --    Path convention: {user_id}/{activity_id}/{uuid}.jpg
 -- ───────────────────────────────────────────────────────────────────
