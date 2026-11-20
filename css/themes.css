@@ -1,0 +1,30 @@
+/* Themes are pure variable sets. Keys match profiles.theme. */
+
+/* Neutral — login screen and anything outside a theme */
+:root {
+  --bg: #111113; --surface: #1a1a1d; --surface-2: #232327;
+  --text: #f1f1f3; --muted: #9a9aa3; --border: #2e2e33;
+  --accent: #8a8aff; --highlight: #8a8aff; --on-accent: #0b0b14;
+  --radius: 12px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* a — Samarth: black, red accent, orange highlights */
+[data-theme="a"] {
+  --bg: #0a0a0b; --surface: #151517; --surface-2: #1f1f22;
+  --text: #f4f4f5; --muted: #a1a1aa; --border: #2a2a2e;
+  --accent: #e5242b; --highlight: #ff8a1f; --on-accent: #ffffff;
+  --radius: 8px;
+}
+
+/* b — Shreyasi: maroon with teal */
+[data-theme="b"] {
+  --bg: #1c0b11; --surface: #2a1219; --surface-2: #371820;
+  --text: #f7edef; --muted: #c4a4ab; --border: #4a2430;
+  --accent: #1fb5ad; --highlight: #d8506f; --on-accent: #04201f;
+  --radius: 16px;
+}
+
+/* Cards/comments are tinted by their AUTHOR's accent, whoever is viewing. */
+[data-author-theme="a"] { --author-accent: #e5242b; }
+[data-author-theme="b"] { --author-accent: #1fb5ad; }

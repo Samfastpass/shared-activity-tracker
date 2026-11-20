@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#111113">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Shared Activities</title>
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/base.css">
+</head>
+<body>
+  <main id="login-view" class="login" hidden>
+    <form id="login-form" class="login-card" autocomplete="on">
+      <h1>Shared Activities</h1>
+      <label>Email <input name="email" type="email" autocomplete="username" required></label>
+      <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
+      <button class="btn primary" type="submit">Sign in</button>
+      <p id="login-error" class="error" role="alert"></p>
+    </form>
+  </main>
+
+  <div id="app-view" hidden>
+    <header class="topbar">
+      <h1>Activities</h1>
+      <span id="whoami" class="muted"></span>
+      <button id="sign-out" class="link" type="button">Sign out</button>
+    </header>
+    <main class="container">
+      <div id="feed" class="feed" aria-live="polite"></div>
+      <button id="more" class="btn" type="button" hidden>Load more</button>
+    </main>
+    <button id="new-activity" class="fab" type="button" aria-label="New activity">+</button>
+
+    <dialog id="composer" class="sheet">
+      <form method="dialog" class="composer">
+        <h2>New activity</h2>
+        <label>Title <input name="title" type="text" maxlength="200" required></label>
+        <label>Details <textarea name="body" rows="4" maxlength="10000"></textarea></label>
+        <label>Date <input name="happened_at" type="date" required></label>
+        <div class="row">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Post</button>
+        </div>
+      </form>
+    </dialog>
+  </div>
+
+  <div id="toasts" class="toasts" aria-live="polite"></div>
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
