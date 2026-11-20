@@ -10,13 +10,19 @@ create table if not exists public.members (
 );
 alter table public.members enable row level security;  -- intentionally no policies
 
+-- Lives in a non-exposed schema: RLS policies can call it, but it is NOT
+-- reachable as /rest/v1/rpc/is_member (keeps the Security Advisor clean).
+create schema if not exists private;
+revoke all on schema private from public, anon;
+grant usage on schema private to authenticated;
+
 -- The only SECURITY DEFINER function: returns a boolean, nothing else.
-create or replace function public.is_member() returns boolean
+create or replace function private.is_member() returns boolean
 language sql stable security definer set search_path = '' as $$
   select exists (select 1 from public.members where user_id = (select auth.uid()));
 $$;
-revoke execute on function public.is_member() from public, anon;
-grant  execute on function public.is_member() to authenticated;
+revoke execute on function private.is_member() from public, anon;
+grant  execute on function private.is_member() to authenticated;
 
 -- ───────────────────────────────────────────────────────────────────
 -- 2. Tables
@@ -99,14 +105,14 @@ drop policy if exists profiles_insert on public.profiles;
 drop policy if exists profiles_update on public.profiles;
 drop policy if exists profiles_delete on public.profiles;
 create policy profiles_select on public.profiles for select to authenticated
-  using (public.is_member());
+  using (private.is_member());
 create policy profiles_insert on public.profiles for insert to authenticated
-  with check (public.is_member() and id = (select auth.uid()));
+  with check (private.is_member() and id = (select auth.uid()));
 create policy profiles_update on public.profiles for update to authenticated
-  using (public.is_member() and id = (select auth.uid()))
-  with check (public.is_member() and id = (select auth.uid()));
+  using (private.is_member() and id = (select auth.uid()))
+  with check (private.is_member() and id = (select auth.uid()));
 create policy profiles_delete on public.profiles for delete to authenticated
-  using (public.is_member() and id = (select auth.uid()));
+  using (private.is_member() and id = (select auth.uid()));
 
 -- activities / photos / comments (owner column is `author_id`)
 do $$
@@ -119,14 +125,14 @@ begin
     execute format('drop policy if exists %I on public.%I', t || '_delete', t);
 
     execute format($f$create policy %I on public.%I for select to authenticated
-      using (public.is_member())$f$, t || '_select', t);
+      using (private.is_member())$f$, t || '_select', t);
     execute format($f$create policy %I on public.%I for insert to authenticated
-      with check (public.is_member() and author_id = (select auth.uid()))$f$, t || '_insert', t);
+      with check (private.is_member() and author_id = (select auth.uid()))$f$, t || '_insert', t);
     execute format($f$create policy %I on public.%I for update to authenticated
-      using (public.is_member() and author_id = (select auth.uid()))
-      with check (public.is_member() and author_id = (select auth.uid()))$f$, t || '_update', t);
+      using (private.is_member() and author_id = (select auth.uid()))
+      with check (private.is_member() and author_id = (select auth.uid()))$f$, t || '_update', t);
     execute format($f$create policy %I on public.%I for delete to authenticated
-      using (public.is_member() and author_id = (select auth.uid()))$f$, t || '_delete', t);
+      using (private.is_member() and author_id = (select auth.uid()))$f$, t || '_delete', t);
   end loop;
 end $$;
 
@@ -156,13 +162,13 @@ drop policy if exists photos_objects_insert on storage.objects;
 drop policy if exists photos_objects_delete on storage.objects;
 
 create policy photos_objects_select on storage.objects for select to authenticated
-  using (bucket_id = 'photos' and public.is_member());
+  using (bucket_id = 'photos' and private.is_member());
 
 -- Uploads must land under the uploader's own folder.
 create policy photos_objects_insert on storage.objects for insert to authenticated
   with check (
     bucket_id = 'photos'
-    and public.is_member()
+    and private.is_member()
     and (storage.foldername(name))[1] = (select auth.uid())::text
   );
 
@@ -170,9 +176,13 @@ create policy photos_objects_insert on storage.objects for insert to authenticat
 create policy photos_objects_delete on storage.objects for delete to authenticated
   using (
     bucket_id = 'photos'
-    and public.is_member()
+    and private.is_member()
     and owner_id = (select auth.uid())::text
   );
+
+-- Remove the old exposed copy (earlier versions of this file created it in
+-- public). Every policy above now uses private.is_member(), so nothing depends on it.
+drop function if exists public.is_member();
 
 -- ───────────────────────────────────────────────────────────────────
 -- 7. Realtime (Phase 4): RLS still applies to postgres_changes
