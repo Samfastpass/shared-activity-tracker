@@ -62,6 +62,8 @@ create table if not exists public.comments (
   body text not null check (char_length(body) between 1 and 5000),
   created_at timestamptz not null default now()
 );
+-- Added in Phase 4 (shown as "edited" in the UI); safe on databases created earlier.
+alter table public.comments add column if not exists edited_at timestamptz;
 
 -- ───────────────────────────────────────────────────────────────────
 -- 3. Indexes
@@ -88,6 +90,19 @@ create trigger profiles_set_updated_at before update on public.profiles
 drop trigger if exists activities_set_updated_at on public.activities;
 create trigger activities_set_updated_at before update on public.activities
   for each row execute function public.set_updated_at();
+
+-- edited_at is set only when the text actually changes, and can't be set from the client.
+create or replace function public.set_comment_edited_at() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  new.edited_at := case when new.body is distinct from old.body then now() else old.edited_at end;
+  return new;
+end;
+$$;
+
+drop trigger if exists comments_set_edited_at on public.comments;
+create trigger comments_set_edited_at before update on public.comments
+  for each row execute function public.set_comment_edited_at();
 
 -- ───────────────────────────────────────────────────────────────────
 -- 5. Row-level security (every table in public)
@@ -191,7 +206,7 @@ do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['activities', 'comments'] loop
+    foreach t in array array['activities', 'comments', 'photos'] loop
       if not exists (
         select 1 from pg_publication_tables
         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

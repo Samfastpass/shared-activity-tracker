@@ -40,8 +40,8 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 /* App shell */
 .topbar { position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 12px; padding: 12px 16px; background: color-mix(in srgb, var(--bg) 85%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--border); }
 .topbar h1 { flex: 1; font-size: 1.3rem; }
-.container { max-width: 680px; margin: 0 auto; padding: 16px 16px 120px; display: grid; gap: 16px; }
-.feed { display: grid; gap: 16px; }
+.container { max-width: 680px; margin: 0 auto; padding: 16px 16px 120px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+.feed { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }   /* minmax(0, …): wide content can never stretch the page */
 
 .avatar {
   flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
@@ -62,7 +62,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 
 .thread { margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--border); display: grid; gap: 10px; }
 .comment { padding: 8px 12px; border-radius: calc(var(--radius) * .75); background: color-mix(in srgb, var(--author-accent, var(--accent)) 8%, var(--surface-2)); }
-.comment-head { display: flex; gap: 6px; align-items: center; font-size: .85rem; }
+.comment-head { display: flex; flex-wrap: wrap; gap: 2px 6px; align-items: center; font-size: .85rem; }
 .comment-head .when { white-space: nowrap; }
 .comment-head strong { color: var(--author-accent, var(--accent)); font-weight: 800; }
 .comment-head .link { margin-left: auto; padding: 2px 4px; font-size: .8rem; color: var(--muted); font-weight: 600; }
@@ -124,3 +124,9 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 .lb-nav { width: 44px; padding: 0; font-size: 1.6rem; line-height: 1; background: rgb(255 255 255 / .12); border-color: transparent; }
 .lb-nav:disabled { opacity: .25; }
 @media (max-width: 480px) { .lb-nav { width: 36px; min-height: 56px; } }
+
+/* Comment editing */
+.comment-actions { margin-left: auto; display: inline-flex; gap: 2px; }
+.comment-head .comment-actions .link { margin-left: 0; }
+.comment-head .edited { font-size: .75rem; white-space: nowrap; }
+.comment-edit { display: grid; gap: 8px; margin-top: 6px; }

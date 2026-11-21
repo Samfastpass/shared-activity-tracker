@@ -24,6 +24,7 @@ export function toast(message) {
   const host = document.getElementById('toasts');
   const t = el('div', { class: 'toast', role: 'status' }, message);
   host.append(t);
+  while (host.children.length > 3) host.firstElementChild.remove();   // never pile up
   setTimeout(() => t.remove(), 4500);
 }
 
