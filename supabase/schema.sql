@@ -1,4 +1,4 @@
--- Shared Activity Tracker — database & security (Phase 1)
+-- Moments — database & security (Phase 1)
 -- Paste into the Supabase SQL editor. Idempotent: safe to run repeatedly.
 -- The two user IDs in section 8 come from Auth > Users (Samarth, Shreyasi).
 
