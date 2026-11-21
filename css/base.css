@@ -47,6 +47,7 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
   flex: none; display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
   background: var(--author-accent, var(--accent)); color: #1a1218; font-weight: 800; font-size: .85rem; line-height: 1; letter-spacing: -.01em;
 }
+img.avatar { object-fit: cover; background: var(--surface-2); border: 2px solid var(--author-accent, var(--accent)); }
 .avatar.small { width: 26px; height: 26px; font-size: .7rem; }
 
 .card {
@@ -130,3 +131,31 @@ input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 2px
 .comment-head .comment-actions .link { margin-left: 0; }
 .comment-head .edited { font-size: .75rem; white-space: nowrap; }
 .comment-edit { display: grid; gap: 8px; margin-top: 6px; }
+
+/* Top bar: who you are + settings */
+.who { display: inline-flex; align-items: center; gap: 8px; padding: 4px 10px 4px 4px; background: none; border: 1px solid var(--border); border-radius: 999px; cursor: pointer; color: var(--muted); font-weight: 700; }
+.who:hover { color: var(--text); }
+.who .avatar { width: 28px; height: 28px; font-size: .75rem; }
+
+/* Settings */
+.settings { display: grid; gap: 18px; }
+.settings h2 { font-size: 1.4rem; }
+.avatar-row { display: flex; align-items: center; gap: 16px; }
+.avatar.large { width: 76px; height: 76px; font-size: 1.5rem; }
+.avatar-actions { display: grid; gap: 4px; justify-items: start; }
+.themes { border: 0; margin: 0; padding: 0; min-width: 0; display: grid; gap: 10px; }
+.themes legend { padding: 0; margin-bottom: 8px; font-size: .9rem; font-weight: 600; color: var(--muted); }
+.themes p { margin: 0; font-size: .85rem; }
+.theme-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+/* each tile sets its own [data-theme] variables, so it previews its own colours */
+.theme-tile { position: relative; display: grid; gap: 6px; padding: 14px; cursor: pointer; font-size: 1rem; font-weight: 400;
+  background: var(--surface); color: var(--text); border: 2px solid var(--border); border-radius: var(--radius); }
+.theme-tile input { position: absolute; opacity: 0; inset: 0; cursor: pointer; }
+.theme-tile:has(input:checked) { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.theme-tile:has(input:focus-visible) { outline: 2px solid var(--highlight); outline-offset: 3px; }
+.theme-tile .muted { font-size: .8rem; }
+.swatches { display: flex; gap: 6px; }
+.swatches i { width: 22px; height: 22px; border-radius: 50%; border: 1px solid var(--border); }
+.swatches i:nth-child(1) { background: var(--bg); }
+.swatches i:nth-child(2) { background: var(--accent); }
+.swatches i:nth-child(3) { background: var(--highlight); }

@@ -83,3 +83,33 @@ export async function deletePhoto({ id, storage_path }) {
   await removeFiles([storage_path]).catch(() => {});   // row is gone; an orphaned file is harmless
   forgetUrl(storage_path);
 }
+
+// Square 256px JPEG for a profile picture. Re-encoded through a canvas, so EXIF/GPS is dropped.
+export async function prepareAvatar(file) {
+  if (!file.type.startsWith('image/')) throw new Error('That file is not an image.');
+  let small;
+  try {
+    small = await imageCompression(file, { maxWidthOrHeight: 512, initialQuality: 0.9, fileType: 'image/jpeg', useWebWorker: true, preserveExif: false });
+  } catch {
+    throw new Error("Couldn't read this photo.");
+  }
+  const bitmap = await createImageBitmap(small);
+  const side = Math.min(bitmap.width, bitmap.height);
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 256;
+  const g = canvas.getContext('2d');
+  g.fillStyle = '#fff';
+  g.fillRect(0, 0, 256, 256);
+  g.drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, 256, 256);
+  bitmap.close?.();
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.85));
+  if (!blob) throw new Error("Couldn't prepare this photo.");
+  return blob;
+}
+
+export async function uploadAvatar(userId, blob) {
+  const path = `${userId}/avatar/${crypto.randomUUID()}.jpg`;
+  const { error } = await supabase.storage.from(BUCKET).upload(path, blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '3600' });
+  if (error) throw error;
+  return path;
+}
