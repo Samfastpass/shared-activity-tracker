@@ -39,9 +39,12 @@
     <dialog id="composer" class="sheet">
       <form method="dialog" class="composer">
         <h2>Share something new <span class="heart" aria-hidden="true">♡</span></h2>
-        <label>Title <input name="title" type="text" maxlength="200" placeholder="What did we get up to?" required></label>
-        <label>Details <textarea name="body" rows="4" maxlength="10000" placeholder="Tell the story (optional)"></textarea></label>
-        <label>Date <input name="happened_at" type="date" required></label>
+        <fieldset class="fields">
+          <label>Title <input name="title" type="text" maxlength="200" placeholder="What did we get up to?" required></label>
+          <label>Details <textarea name="body" rows="4" maxlength="10000" placeholder="Tell the story (optional)"></textarea></label>
+          <label>Date <input name="happened_at" type="date" required></label>
+        </fieldset>
+        <p class="status error" role="status"></p>
         <div class="row">
           <button class="btn" type="button" data-cancel>Cancel</button>
           <button class="btn primary" type="submit">Share</button>

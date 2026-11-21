@@ -1,4 +1,5 @@
 import { signIn, signOut, getSession, onSignedOut } from './auth.js';
+import { clearUrlCache } from './photos.js';
 import { applyTheme, loadProfiles } from './theme.js';
 import { createFeed } from './feed.js';
 import { setupComposer } from './activity.js';
@@ -10,6 +11,7 @@ let booted = false;
 let feed;
 
 function showLogin(message = '') {
+  clearUrlCache();                      // signed photo URLs never outlive the session
   applyTheme('');                       // login screen stays neutral
   appView.hidden = true;
   loginView.hidden = false;
@@ -34,7 +36,7 @@ async function boot(session) {
     booted = true;
     const ctx = { me: { id: session.user.id, ...me }, profiles };
     feed = createFeed({ container: $('feed'), moreButton: $('more'), ctx });
-    setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onCreated: () => feed.reload() });
+    ctx.composer = setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onChanged: () => feed.reload(), ctx });
   }
   await feed.reload();
 }

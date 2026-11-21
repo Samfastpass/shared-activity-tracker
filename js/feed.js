@@ -2,17 +2,29 @@ import { supabase } from './supabase.js';
 import { el, formatDate, toast, avatar } from './dom.js';
 import { mountComments } from './comments.js';
 import { deleteActivity } from './activity.js';
+import { signUrls, forgetUrl } from './photos.js';
+import { openLightbox } from './lightbox.js';
+import { deletePhoto } from './photos.js';
 
 const PAGE_SIZE = 10;
 
 async function fetchPage(from) {
   const { data, error } = await supabase
     .from('activities')
-    .select('id, author_id, title, body, happened_at, created_at, comments(count)')
+    .select('id, author_id, title, body, happened_at, created_at, comments(count), photos(id, author_id, storage_path, width, height, created_at)')
     .order('happened_at', { ascending: false })
     .order('created_at', { ascending: false })
+    .order('created_at', { referencedTable: 'photos', ascending: true })
     .range(from, from + PAGE_SIZE - 1);
   if (error) throw error;
+
+  // One batched request signs every photo on the page (URLs expire after ~1 hour).
+  const paths = data.flatMap((a) => (a.photos || []).map((p) => p.storage_path));
+  let urls = new Map();
+  if (paths.length) {
+    try { urls = await signUrls(paths); } catch (e) { toast(`Couldn't load photos: ${e.message}`); }
+  }
+  for (const a of data) a.photos = (a.photos || []).map((p) => ({ ...p, url: urls.get(p.storage_path) }));
   return data;
 }
 
@@ -76,10 +88,12 @@ function renderCard(a, ctx, reload) {
   const del = mine && el('button', {
     class: 'link danger', type: 'button',
     onclick: async () => {
-      if (!confirm('Delete this activity and its comments?')) return;
-      try { await deleteActivity(a.id); await reload(); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
+      if (!confirm('Delete this activity, its photos and its comments?')) return;
+      try { await deleteActivity(a); await reload(); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
     },
   }, 'Delete');
+
+  const addPhotos = mine && el('button', { class: 'link', type: 'button', onclick: () => ctx.composer.addPhotos(a) }, 'Add photos');
 
   return el('article', { class: 'card', 'data-author-theme': author?.theme || '' },
     el('header', { class: 'card-head' },
@@ -88,6 +102,35 @@ function renderCard(a, ctx, reload) {
       el('time', { class: 'muted', datetime: a.happened_at }, formatDate(a.happened_at))),
     el('h2', { class: 'card-title' }, a.title),
     a.body && el('p', { class: 'card-body' }, a.body),
-    el('footer', { class: 'card-foot' }, toggle, del),
+    photoGrid(a, ctx, reload),
+    el('footer', { class: 'card-foot' }, toggle, addPhotos, del),
     thread);
+}
+
+function photoGrid(a, ctx, reload) {
+  const photos = a.photos.filter((p) => p.url);
+  if (!photos.length) return null;
+  const grid = el('div', { class: 'photo-grid', 'data-count': photos.length === 1 ? '1' : 'many' });
+  photos.forEach((p, i) => {
+    const alt = `Photo ${i + 1} of ${photos.length} from “${a.title}”`;
+    const img = el('img', { src: p.url, alt, loading: 'lazy', decoding: 'async', width: p.width || null, height: p.height || null });
+    // A signed URL can expire while the page stays open: re-sign once and retry.
+    img.addEventListener('error', async () => {
+      if (img.dataset.retried) return;
+      img.dataset.retried = '1';
+      forgetUrl(p.storage_path);
+      try {
+        const fresh = (await signUrls([p.storage_path])).get(p.storage_path);
+        if (fresh) { p.url = fresh; img.src = fresh; }
+      } catch { /* leave the broken image */ }
+    });
+    grid.append(el('button', {
+      class: 'photo', type: 'button', 'aria-label': `Open ${alt}`,
+      onclick: () => openLightbox(photos.map((x, n) => ({ ...x, alt: `Photo ${n + 1} of ${photos.length}` })), i, {
+        canDelete: (item) => item.author_id === ctx.me.id,
+        onDelete: async (item) => { await deletePhoto(item); await reload(); },
+      }),
+    }, img));
+  });
+  return grid;
 }
