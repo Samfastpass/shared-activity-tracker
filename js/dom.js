@@ -28,9 +28,14 @@ export function toast(message) {
   setTimeout(() => t.remove(), 4500);
 }
 
-// Round initials in the author's colour (the colour comes from the enclosing [data-author-theme]).
-export function avatar(profile, small = false) {
+// Round avatar in the author's colour: their picture if they have one, else initials.
+// size: false/'' = normal, true/'small', 'large'.
+export function avatar(profile, size = '') {
+  const cls = `avatar${size === true || size === 'small' ? ' small' : size === 'large' ? ' large' : ''}`;
   const name = (profile?.display_name || '?').trim();
-  const initial = name.charAt(0).toUpperCase() + name.slice(1, 2).toLowerCase();   // 'Sa' / 'Sh' (both names start with S)
-  return el('span', { class: small ? 'avatar small' : 'avatar', 'aria-hidden': 'true' }, initial);
+  const initials = el('span', { class: cls, 'aria-hidden': 'true' }, name.charAt(0).toUpperCase() + name.slice(1, 2).toLowerCase());   // 'Sa' / 'Sh'
+  if (!profile?.avatarUrl) return initials;
+  const img = el('img', { class: `${cls} has-img`, src: profile.avatarUrl, alt: '', decoding: 'async' });
+  img.addEventListener('error', () => img.replaceWith(initials));
+  return img;
 }
