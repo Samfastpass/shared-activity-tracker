@@ -9,6 +9,11 @@ export async function createActivity({ id, title, body, happened_at }) {
   if (error) throw error;
 }
 
+export async function updateActivity(id, { title, body, happened_at }) {
+  const { error } = await supabase.from('activities').update({ title, body: body || null, happened_at }).eq('id', id);
+  if (error) throw error;
+}
+
 // Deleting the row cascades to photos + comments rows; then the storage objects are removed.
 export async function deleteActivity(activity) {
   const { error } = await supabase.from('activities').delete().eq('id', activity.id);
@@ -20,8 +25,8 @@ export async function deleteActivity(activity) {
   }
 }
 
-// Wires the composer dialog for two modes: a new activity (with photos), or "add photos" to an
-// existing one. Returns { addPhotos(activity) }. `onChanged` runs when the dialog closes after
+// Wires the composer dialog for two modes: a new activity, or editing one of your own (text and/or
+// more photos). Returns { edit(activity) }. `onChanged` runs when the dialog closes after
 // anything was saved.
 export function setupComposer({ dialog, openButton, onChanged, ctx }) {
   const form = dialog.querySelector('form');
@@ -34,19 +39,21 @@ export function setupComposer({ dialog, openButton, onChanged, ctx }) {
   const picker = createPicker();
   form.querySelector('.row').before(picker.element);
 
-  let mode = 'new', activityId = null, dirty = false;
+  let mode = 'new', activityId = null, dirty = false, saved = false;
   const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
 
   function open(nextMode, activity) {
-    mode = nextMode; activityId = activity?.id ?? null; dirty = false;
+    mode = nextMode; activityId = activity?.id ?? null; dirty = false; saved = false;
     form.reset(); picker.reset(); status.textContent = '';
-    fields.disabled = mode === 'add'; fields.hidden = mode === 'add';
-    heading.firstChild.textContent = mode === 'add' ? 'Add photos ' : 'Share something new ';
-    submit.textContent = mode === 'add' ? 'Upload' : 'Share';
+    fields.disabled = false; fields.hidden = false;
+    heading.firstChild.textContent = mode === 'edit' ? 'Edit this moment ' : 'Share something new ';
+    submit.textContent = mode === 'edit' ? 'Save' : 'Share';
     cancel.textContent = 'Cancel';
-    date.value = today();
+    form.elements.title.value = activity?.title ?? '';
+    form.elements.body.value = activity?.body ?? '';
+    date.value = activity?.happened_at ?? today();
     dialog.showModal();
-    (mode === 'add' ? picker.element.querySelector('label') : form.elements.title).focus();
+    form.elements.title.focus();
   }
 
   openButton.addEventListener('click', () => open('new'));
@@ -55,13 +62,13 @@ export function setupComposer({ dialog, openButton, onChanged, ctx }) {
 
   form.addEventListener('submit', async (ev) => {
     ev.preventDefault();
-    if (mode === 'add' && picker.count() === 0) { status.textContent = 'Choose at least one photo.'; return; }
     submit.disabled = true; cancel.disabled = true;
     try {
-      if (!activityId) {                                   // first submit of a new activity
-        const id = crypto.randomUUID();
-        await createActivity({ id, title: form.elements.title.value.trim(), body: form.elements.body.value.trim(), happened_at: date.value });
-        activityId = id; dirty = true;
+      if (!saved) {                                        // first submit: create or update the text
+        const text = { title: form.elements.title.value.trim(), body: form.elements.body.value.trim(), happened_at: date.value };
+        if (mode === 'edit') await updateActivity(activityId, text);
+        else { activityId = crypto.randomUUID(); await createActivity({ id: activityId, ...text }); }
+        saved = true; dirty = true;
         fields.disabled = true;                            // saved; only photo retries from here
       }
       const { failed } = await picker.uploadAll(activityId, ctx.me.id);
@@ -71,12 +78,11 @@ export function setupComposer({ dialog, openButton, onChanged, ctx }) {
         submit.textContent = 'Retry'; cancel.textContent = 'Close';
         return;
       }
-      if (mode === 'add') dirty = true;
       dialog.close();
     } catch (e) {
       toast(`Couldn't save: ${e.message}`);
     } finally { submit.disabled = false; cancel.disabled = false; }
   });
 
-  return { addPhotos: (activity) => open('add', activity) };
+  return { edit: (activity) => open('edit', activity) };
 }
