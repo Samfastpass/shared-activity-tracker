@@ -15,7 +15,7 @@
 <body>
   <main id="login-view" class="login" hidden>
     <form id="login-form" class="login-card" autocomplete="on">
-      <h1>Moments <span class="heart" aria-hidden="true">♥</span></h1>
+      <h1>Moments</h1>
       <p class="tagline muted">Just for the two of us</p>
       <label>Email <input name="email" type="email" autocomplete="username" required></label>
       <label>Password <input name="password" type="password" autocomplete="current-password" required></label>
@@ -26,13 +26,38 @@
 
   <div id="app-view" hidden>
     <header class="topbar">
-      <h1>Moments <span class="heart" aria-hidden="true">♥</span></h1>
-      <span id="whoami" class="muted"></span>
+      <h1>Moments</h1>
+      <button id="open-settings" class="who" type="button" aria-label="Settings">
+        <span id="whoami-avatar"></span><span id="whoami"></span>
+      </button>
       <button id="sign-out" class="link" type="button">Sign out</button>
     </header>
-    <main class="container">
+    <main id="feed-view" class="container">
       <div id="feed" class="feed" aria-live="polite"></div>
       <button id="more" class="btn" type="button" hidden>Load more</button>
+    </main>
+    <main id="settings-view" class="container" hidden>
+      <form id="settings-form" class="settings" autocomplete="off">
+        <h2>Settings</h2>
+        <div class="avatar-row">
+          <span id="settings-avatar"></span>
+          <div class="avatar-actions">
+            <label class="btn photo-add">Change photo<input id="avatar-input" type="file" accept="image/*" hidden></label>
+            <button id="avatar-remove" class="link" type="button">Remove photo</button>
+          </div>
+        </div>
+        <label>Display name <input name="display_name" type="text" maxlength="60" required></label>
+        <fieldset class="themes">
+          <legend>Your look</legend>
+          <div id="theme-tiles" class="theme-tiles"></div>
+          <p class="muted">Your posts and comments are tinted with your theme's colour for both of you.</p>
+        </fieldset>
+        <p class="status error" role="status"></p>
+        <div class="row">
+          <button id="settings-back" class="btn" type="button">Back</button>
+          <button class="btn primary" type="submit">Save</button>
+        </div>
+      </form>
     </main>
     <button id="new-activity" class="fab" type="button" aria-label="New activity">+</button>
 

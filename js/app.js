@@ -2,6 +2,8 @@ import { signIn, signOut, getSession, onSignedOut } from './auth.js';
 import { clearUrlCache } from './photos.js';
 import { startRealtime } from './realtime.js';
 import { applyTheme, loadProfiles } from './theme.js';
+import { avatar } from './dom.js';
+import { setupSettings } from './settings.js';
 import { createFeed } from './feed.js';
 import { setupComposer } from './activity.js';
 
@@ -10,10 +12,52 @@ const loginView = $('login-view');
 const appView = $('app-view');
 let ctx = null;
 let feed;
+let settings;
 let stopLive = null;
+let lastProfileRefresh = 0;
+
+function renderWhoami() {
+  $('whoami').textContent = ctx.me.display_name;
+  $('whoami-avatar').replaceChildren(avatar(ctx.me, 'small'));
+}
+
+// Two views share the page: the feed and settings (#settings, so the back button works).
+function showView(name) {
+  const inSettings = name === 'settings';
+  $('feed-view').hidden = inSettings;
+  $('settings-view').hidden = !inSettings;
+  $('new-activity').hidden = inSettings;
+  if (inSettings) settings.open(); else settings.revert();
+}
+const route = () => { if (!appView.hidden && ctx) showView(location.hash === '#settings' ? 'settings' : 'feed'); };
+function go(name) {
+  if (name === 'settings') location.hash = 'settings';
+  else history.replaceState(null, '', location.pathname + location.search);
+  showView(name);
+}
+window.addEventListener('hashchange', route);
+
+// The other person may have changed their name, picture or theme.
+async function refreshProfiles() {
+  lastProfileRefresh = Date.now();
+  try {
+    const fresh = await loadProfiles();
+    const sig = (m) => JSON.stringify([...m].map(([id, p]) => [id, p.display_name, p.theme, p.avatar_path]).sort());
+    const changed = sig(fresh) !== sig(ctx.profiles);
+    for (const [id, p] of fresh) {
+      const mine = ctx.profiles.get(id);
+      if (mine) Object.assign(mine, p); else ctx.profiles.set(id, p);     // keep ctx.me's identity
+    }
+    if (changed) { renderWhoami(); await feed.reload({ silent: true }); }
+  } catch { /* try again next time */ }
+}
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && ctx && !appView.hidden && Date.now() - lastProfileRefresh > 30000) refreshProfiles();
+});
 
 function showLogin(message = '') {
   stopLive?.(); stopLive = null;       // no live events once signed out
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   feed?.clear();                       // and nothing left on the page for the next person
   clearUrlCache();                      // signed photo URLs never outlive the session
   applyTheme('');                       // login screen stays neutral
@@ -32,23 +76,31 @@ async function boot(session) {
     return;
   }
   applyTheme(profile.theme);
-  $('whoami').textContent = profile.display_name;
   loginView.hidden = true;
   appView.hidden = false;
 
-  const me = { id: session.user.id, ...profile };
+  const me = profile;                       // same object as in the profiles map (it has the id)
   if (!ctx) {
     ctx = { me, profiles };
     feed = createFeed({ container: $('feed'), moreButton: $('more'), ctx });
     ctx.composer = setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onChanged: () => feed.reload({ silent: true }), ctx });
+    settings = setupSettings({
+      ctx,
+      onBack: () => go('feed'),
+      onSaved: async () => { applyTheme(ctx.me.theme); renderWhoami(); go('feed'); await feed.reload({ silent: true }); },
+    });
+    $('open-settings').addEventListener('click', () => go('settings'));
   } else {
     Object.assign(ctx, { me, profiles });   // a different person may sign in on the same device
   }
+  renderWhoami();
+  showView(location.hash === '#settings' ? 'settings' : 'feed');
+  lastProfileRefresh = Date.now();
   await feed.reload();
   stopLive?.();
   stopLive = startRealtime({
     onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment,
-    onReconnect: () => feed.reload({ silent: true }),
+    onReconnect: () => { refreshProfiles(); feed.reload({ silent: true }); },
   });
 }
 
