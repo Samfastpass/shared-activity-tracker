@@ -97,6 +97,12 @@
           <label>Title <input name="title" type="text" maxlength="200" placeholder="What did we get up to?" required></label>
           <label>Details <textarea name="body" rows="4" maxlength="10000" placeholder="Tell the story (optional)"></textarea></label>
           <label>Date <input name="happened_at" type="date" required></label>
+          <div class="kind v2" role="radiogroup" aria-label="Type of moment">
+            <label class="kind-opt"><input type="radio" name="kind" value="one_to_one" checked><span>Just us</span></label>
+            <label class="kind-opt"><input type="radio" name="kind" value="group"><span>Group</span></label>
+          </div>
+          <label class="v2" id="who-label" hidden>Who else came? <input name="who_came" type="text" maxlength="300" placeholder="e.g. Priya, Dev and Sam"></label>
+          <div class="v2" id="place-slot"></div>
         </fieldset>
         <p class="status error" role="status"></p>
         <div class="row">

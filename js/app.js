@@ -83,7 +83,7 @@ async function boot(session) {
 
   const me = profile;                       // same object as in the profiles map (it has the id)
   if (!ctx) {
-    ctx = { me, profiles };
+    ctx = { me, profiles, features: { moments2: true } };
     feed = createFeed({ container: $('feed'), moreButton: $('more'), ctx });
     ctx.composer = setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onChanged: () => feed.reload({ silent: true }), ctx });
     ctx.feedback = createFeedback({ ctx, banner: $('feedback-banner'), onChanged: (id) => feed.refreshFeedback(id) });
@@ -103,7 +103,10 @@ async function boot(session) {
   await feed.reload();
   stopLive?.();
   stopLive = startRealtime({
-    onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment, onFeedback: ctx.feedback.onEvent,
+    onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment, extras: [
+      { topic: 'moments-feedback', table: 'feedback_requests', handler: ctx.feedback.onEvent },
+      { topic: 'moments-favourites', table: 'favourites', handler: feed.onFavourite },
+    ],
     onReconnect: async () => { refreshProfiles(); await ctx.feedback.load(); feed.reload({ silent: true }); },
   });
 }
