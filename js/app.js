@@ -5,6 +5,9 @@ import { applyTheme, loadProfiles } from './theme.js';
 import { avatar } from './dom.js';
 import { setupSettings } from './settings.js';
 import { createFeedback } from './feedback.js';
+import { createTimeline } from './timeline.js';
+import { createMapView } from './mapview.js';
+import { setupMomentDialog } from './momentview.js';
 import { createFeed } from './feed.js';
 import { setupComposer } from './activity.js';
 
@@ -14,26 +17,45 @@ const appView = $('app-view');
 let ctx = null;
 let feed;
 let settings;
+let timeline;
+let mapView;
+let currentView = 'feed';
 let stopLive = null;
 let lastProfileRefresh = 0;
+
+function refreshActive() {
+  if (appView.hidden) return;
+  if (currentView === 'timeline') timeline.show();
+  if (currentView === 'map') mapView.show();
+}
 
 function renderWhoami() {
   $('whoami').textContent = ctx.me.display_name;
   $('whoami-avatar').replaceChildren(avatar(ctx.me, 'small'));
 }
 
-// Two views share the page: the feed and settings (#settings, so the back button works).
-function showView(name) {
-  const inSettings = name === 'settings';
-  $('feed-view').hidden = inSettings;
-  $('settings-view').hidden = !inSettings;
-  $('new-activity').hidden = inSettings;
-  if (inSettings) settings.open(); else settings.revert();
+// The sections share one page and are addressed by hash (#timeline, #map, #settings), so the
+// browser back button and reloads work.
+const VIEWS = ['feed', 'timeline', 'map', 'settings'];
+const hashView = () => { const v = location.hash.replace('#', ''); return VIEWS.includes(v) ? v : 'feed'; };
+
+function showView(name, force = false) {
+  if ((name === 'timeline' || name === 'map') && ctx?.features?.moments2 === false) name = 'feed';   // needs the updated database
+  const previous = currentView;
+  if (name === previous && !force) return;      // e.g. the hash-change that follows our own switch: don't reset a form being typed in
+  currentView = name;
+  for (const v of VIEWS) $(`${v}-view`).hidden = v !== name;
+  $('new-activity').hidden = name === 'settings' || name === 'map';
+  document.querySelectorAll('#tabs a').forEach((a) => { if (a.dataset.tab === name) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current'); });
+  $('tabs').hidden = name === 'settings';
+  if (name === 'settings') settings.open(); else if (previous === 'settings') settings.revert();
+  if (name === 'timeline') timeline.show();
+  if (name === 'map') mapView.show();
 }
-const route = () => { if (!appView.hidden && ctx) showView(location.hash === '#settings' ? 'settings' : 'feed'); };
+const route = () => { if (!appView.hidden && ctx) showView(hashView()); };
 function go(name) {
-  if (name === 'settings') location.hash = 'settings';
-  else history.replaceState(null, '', location.pathname + location.search);
+  if (name === 'feed') history.replaceState(null, '', location.pathname + location.search);
+  else location.hash = name;
   showView(name);
 }
 window.addEventListener('hashchange', route);
@@ -59,6 +81,7 @@ document.addEventListener('visibilitychange', () => {
 function showLogin(message = '') {
   stopLive?.(); stopLive = null;       // no live events once signed out
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  timeline?.clear(); mapView?.clear();
   feed?.clear();                       // and nothing left on the page for the next person
   ctx?.feedback?.clear();
   clearUrlCache();                      // signed photo URLs never outlive the session
@@ -93,14 +116,20 @@ async function boot(session) {
       onSaved: async () => { applyTheme(ctx.me.theme); renderWhoami(); go('feed'); await feed.reload({ silent: true }); },
     });
     $('open-settings').addEventListener('click', () => go('settings'));
+    const moment = setupMomentDialog({ ctx, onChanged: () => { feed.reload({ silent: true }); refreshActive(); } });
+    timeline = createTimeline({ ctx, view: $('timeline-view'), openMoment: moment.open });
+    mapView = createMapView({ ctx, view: $('map-view'), openMoment: moment.open });
+    let refreshTimer = null;
+    ctx.dataChanged = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refreshActive, 600); };   // live changes while a section is open
   } else {
     Object.assign(ctx, { me, profiles });   // a different person may sign in on the same device
   }
   renderWhoami();
-  showView(location.hash === '#settings' ? 'settings' : 'feed');
   lastProfileRefresh = Date.now();
   await ctx.feedback.load();                // before the feed, so cards render with their requests
   await feed.reload();
+  document.querySelectorAll('#tabs [data-needs="v2"]').forEach((a) => { a.hidden = ctx.features.moments2 === false; });   // the feed load tells us
+  showView(hashView(), true);
   stopLive?.();
   stopLive = startRealtime({
     onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment, extras: [
