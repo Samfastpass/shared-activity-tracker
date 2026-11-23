@@ -159,3 +159,33 @@ img.avatar { object-fit: cover; background: var(--surface-2); border: 2px solid 
 .swatches i:nth-child(1) { background: var(--bg); }
 .swatches i:nth-child(2) { background: var(--accent); }
 .swatches i:nth-child(3) { background: var(--highlight); }
+
+/* Meet feedback */
+.btn.small { min-height: 34px; padding: 0 14px; font-size: .85rem; }
+.fb-banner { display: grid; gap: 8px; }
+.fb-banner-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 14px; border-radius: var(--radius); font-size: .9rem;
+  border: 1px solid color-mix(in srgb, var(--author-accent, var(--accent)) 45%, var(--border));
+  background: color-mix(in srgb, var(--author-accent, var(--accent)) 14%, var(--surface)); box-shadow: var(--shadow); }
+.fb-banner-row span { min-width: 0; overflow-wrap: anywhere; }
+.fb-banner-row strong { color: var(--author-accent, var(--accent)); }
+.fb-banner-row .btn { flex: none; }
+.feedback { display: grid; gap: 8px; margin: 6px 0; }
+.feedback:empty { display: none; }
+.fb-box { padding: 10px 12px; border-radius: calc(var(--radius) * .75); font-size: .9rem;
+  border: 1px dashed color-mix(in srgb, var(--author-accent, var(--accent)) 55%, var(--border));
+  background: color-mix(in srgb, var(--author-accent, var(--accent)) 7%, var(--surface-2)); }
+.fb-box.answered { border-style: solid; }
+.fb-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fb-head strong { color: var(--author-accent, var(--accent)); }
+.fb-head .link { padding: 2px 4px; font-size: .8rem; }
+.fb-questions { margin: 6px 0 0; padding-left: 1.2rem; color: var(--muted); }
+.fb-qa { margin-top: 8px; }
+.fb-q { margin: 0; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.fb-a { margin: 2px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.q-list { display: grid; gap: 10px; }
+.q-row { display: flex; align-items: center; gap: 6px; }
+.q-row .link { padding: 8px; color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { padding: 6px 12px; cursor: pointer; font-size: .8rem; font-weight: 700; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; }
+.chip:hover { border-color: var(--highlight); }

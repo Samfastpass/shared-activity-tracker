@@ -181,7 +181,9 @@ export function createFeed({ container, moreButton, ctx }) {
   }
 
   moreButton.addEventListener('click', loadMore);
-  return { reload, clear, onActivity, onPhoto, onComment };
+  const refreshFeedback = (id) => cards.get(id)?.api.refreshFeedback();
+
+  return { reload, clear, onActivity, onPhoto, onComment, refreshFeedback };
 }
 
 function emptyState() {
@@ -215,6 +217,14 @@ function renderCard(a, ctx, { open, remove, refresh }) {
     else { thread.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
   });
 
+  const who = ctx.feedback?.other();
+  const feedbackButton = ctx.feedback?.available() && who && el('button', {
+    class: 'link', type: 'button', 'aria-label': `Ask ${who.display_name} for feedback`, onclick: () => ctx.feedback.openAsk(a),
+  }, 'Feedback');
+  const feedback = el('div', { class: 'feedback' });
+  const renderFeedback = () => feedback.replaceChildren(...(ctx.feedback?.sectionFor(a) ?? []));
+  renderFeedback();
+
   const edit = mine && el('button', { class: 'link', type: 'button', onclick: () => ctx.composer.edit(a) }, 'Edit');
   const del = mine && el('button', {
     class: 'link danger', type: 'button',
@@ -232,13 +242,14 @@ function renderCard(a, ctx, { open, remove, refresh }) {
     el('h2', { class: 'card-title' }, a.title),
     a.body && el('p', { class: 'card-body' }, a.body),
     photoGrid(a, ctx, refresh),
-    el('footer', { class: 'card-foot' }, toggle, edit, del),
+    feedback,
+    el('footer', { class: 'card-foot' }, toggle, feedbackButton, edit, del),
     thread);
 
   if (open) show();
   return {
     a, node,
-    api: { isOpen: () => !thread.hidden, setCount, refreshThread: () => threadApi?.refresh() },
+    api: { isOpen: () => !thread.hidden, setCount, refreshThread: () => threadApi?.refresh(), refreshFeedback: renderFeedback },
   };
 }
 

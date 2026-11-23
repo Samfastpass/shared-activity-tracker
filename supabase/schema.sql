@@ -65,12 +65,35 @@ create table if not exists public.comments (
 -- Added in Phase 4 (shown as "edited" in the UI); safe on databases created earlier.
 alter table public.comments add column if not exists edited_at timestamptz;
 
+-- Meet feedback (Phase 6): one member asks the other for feedback on a post, writing 1-5 questions.
+create table if not exists public.feedback_requests (
+  id uuid primary key default gen_random_uuid(),
+  activity_id uuid not null references public.activities on delete cascade,
+  requester_id uuid not null references auth.users default auth.uid(),
+  recipient_id uuid not null references public.profiles on delete cascade,   -- only members have a profile
+  questions jsonb not null,
+  answers jsonb,
+  status text not null default 'pending' check (status in ('pending', 'answered')),
+  created_at timestamptz not null default now(),
+  answered_at timestamptz,
+  check (recipient_id <> requester_id),
+  check (jsonb_typeof(questions) = 'array' and jsonb_array_length(questions) between 1 and 5
+         and length(questions::text) <= 2500
+         and not jsonb_path_exists(questions, '$[*] ? (@.type() != "string")')),
+  check (answers is null or (jsonb_typeof(answers) = 'array'
+         and jsonb_array_length(answers) = jsonb_array_length(questions)
+         and length(answers::text) <= 12000
+         and not jsonb_path_exists(answers, '$[*] ? (@.type() != "string")')))
+);
+
 -- ───────────────────────────────────────────────────────────────────
 -- 3. Indexes
 -- ───────────────────────────────────────────────────────────────────
 create index if not exists activities_happened_at_idx on public.activities (happened_at desc);
 create index if not exists photos_activity_id_idx     on public.photos (activity_id);
 create index if not exists comments_activity_created_idx on public.comments (activity_id, created_at);
+create index if not exists feedback_activity_idx on public.feedback_requests (activity_id);
+create index if not exists feedback_recipient_idx on public.feedback_requests (recipient_id, status);
 
 -- ───────────────────────────────────────────────────────────────────
 -- 4. updated_at maintenance (SECURITY INVOKER, no elevated rights)
@@ -103,6 +126,25 @@ $$;
 drop trigger if exists comments_set_edited_at on public.comments;
 create trigger comments_set_edited_at before update on public.comments
   for each row execute function public.set_comment_edited_at();
+
+-- Submitting answers marks the request answered; nothing else about a request can be changed.
+create or replace function public.set_feedback_answered() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.answers is not null and old.answers is null then
+    new.status := 'answered';
+    new.answered_at := now();
+  else
+    new.status := old.status;
+    new.answered_at := old.answered_at;
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists feedback_set_answered on public.feedback_requests;
+create trigger feedback_set_answered before update on public.feedback_requests
+  for each row execute function public.set_feedback_answered();
 
 -- ───────────────────────────────────────────────────────────────────
 -- 5. Row-level security (every table in public)
@@ -161,6 +203,31 @@ revoke all on public.members, public.profiles, public.activities, public.photos,
 revoke all on public.members from authenticated;
 grant select, insert, update, delete on public.profiles, public.activities, public.photos, public.comments to authenticated;
 
+-- Feedback requests: only the two people involved can read one. The requester creates it
+-- (questions only) and can withdraw it; the recipient answers once (answers only).
+alter table public.feedback_requests enable row level security;
+
+drop policy if exists feedback_select on public.feedback_requests;
+drop policy if exists feedback_insert on public.feedback_requests;
+drop policy if exists feedback_answer on public.feedback_requests;
+drop policy if exists feedback_delete on public.feedback_requests;
+create policy feedback_select on public.feedback_requests for select to authenticated
+  using (private.is_member() and (select auth.uid()) in (requester_id, recipient_id));
+create policy feedback_insert on public.feedback_requests for insert to authenticated
+  with check (private.is_member() and requester_id = (select auth.uid()) and recipient_id <> requester_id
+              and status = 'pending' and answers is null);
+create policy feedback_answer on public.feedback_requests for update to authenticated
+  using (private.is_member() and recipient_id = (select auth.uid()) and status = 'pending')
+  with check (private.is_member() and recipient_id = (select auth.uid()) and answers is not null);
+create policy feedback_delete on public.feedback_requests for delete to authenticated
+  using (private.is_member() and requester_id = (select auth.uid()));
+
+-- Column-level privileges keep each side to its own part of the row.
+revoke all on public.feedback_requests from anon, authenticated;
+grant select, delete on public.feedback_requests to authenticated;
+grant insert (activity_id, recipient_id, questions) on public.feedback_requests to authenticated;
+grant update (answers) on public.feedback_requests to authenticated;
+
 -- ───────────────────────────────────────────────────────────────────
 -- 6. Storage: private `photos` bucket, ~5 MB, images only
 --    Path convention: {user_id}/{activity_id}/{uuid}.jpg
@@ -206,7 +273,7 @@ do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['activities', 'comments', 'photos'] loop
+    foreach t in array array['activities', 'comments', 'photos', 'feedback_requests'] loop
       if not exists (
         select 1 from pg_publication_tables
         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
