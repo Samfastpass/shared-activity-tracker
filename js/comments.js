@@ -1,34 +1,38 @@
 import { supabase } from './supabase.js';
 import { el, toast, avatar } from './dom.js';
 
-export async function loadComments(activityId) {
+// The same thread works for a moment's comments and an idea's comments.
+const MOMENT_COMMENTS = { table: 'comments', fk: 'activity_id' };
+export const IDEA_COMMENTS = { table: 'idea_comments', fk: 'idea_id' };
+
+export async function loadComments(ownerId, src = MOMENT_COMMENTS) {
   const { data, error } = await supabase
-    .from('comments')
+    .from(src.table)
     .select('id, author_id, body, created_at, edited_at')
-    .eq('activity_id', activityId)
+    .eq(src.fk, ownerId)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return data;
 }
 
-export async function addComment(activityId, body) {
-  const { error } = await supabase.from('comments').insert({ activity_id: activityId, body });
+export async function addComment(ownerId, body, src = MOMENT_COMMENTS) {
+  const { error } = await supabase.from(src.table).insert({ [src.fk]: ownerId, body });
   if (error) throw error;
 }
 
-export async function updateComment(id, body) {
-  const { error } = await supabase.from('comments').update({ body }).eq('id', id);
+export async function updateComment(id, body, src = MOMENT_COMMENTS) {
+  const { error } = await supabase.from(src.table).update({ body }).eq('id', id);
   if (error) throw error;
 }
 
-export async function deleteComment(id) {
-  const { error } = await supabase.from('comments').delete().eq('id', id);
+export async function deleteComment(id, src = MOMENT_COMMENTS) {
+  const { error } = await supabase.from(src.table).delete().eq('id', id);
   if (error) throw error;
 }
 
 // Renders the comment thread + form into `container`. `onCount` is told the new total.
 // Returns { refresh } so live updates can re-render the list.
-export async function mountComments(container, activityId, ctx, onCount) {
+export async function mountComments(container, ownerId, ctx, onCount, src = MOMENT_COMMENTS) {
   const list = el('div', { class: 'comment-list' });
   const input = el('input', { type: 'text', maxlength: 5000, placeholder: 'Write a comment…', 'aria-label': 'Write a comment', required: true });
   const form = el('form', { class: 'comment-form' }, input, el('button', { type: 'submit', class: 'btn primary' }, 'Send'));
@@ -41,13 +45,13 @@ export async function mountComments(container, activityId, ctx, onCount) {
     if (editing) { stale = true; return; }     // never clobber a half-typed edit
     stale = false;
     try {
-      const comments = await loadComments(activityId);
+      const comments = await loadComments(ownerId, src);
       if (editing) { stale = true; return; }
       list.replaceChildren(...comments.map((c) => commentRow(c, ctx, {
         remove: async () => {
-          try { await deleteComment(c.id); await refresh(); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
+          try { await deleteComment(c.id, src); await refresh(); } catch (e) { toast(`Couldn't delete: ${e.message}`); }
         },
-        save: async (text) => { await updateComment(c.id, text); },
+        save: async (text) => { await updateComment(c.id, text, src); },
         editStart: () => { editing += 1; },
         editEnd: () => { editing = Math.max(0, editing - 1); if (!editing && stale) refresh(); },
         done: () => refresh(),
@@ -63,7 +67,7 @@ export async function mountComments(container, activityId, ctx, onCount) {
     const body = input.value.trim();
     if (!body) return;
     form.querySelector('button').disabled = true;
-    try { await addComment(activityId, body); input.value = ''; await refresh(); }
+    try { await addComment(ownerId, body, src); input.value = ''; await refresh(); }
     catch (e) { toast(`Couldn't post comment: ${e.message}`); }
     finally { form.querySelector('button').disabled = false; }
   });

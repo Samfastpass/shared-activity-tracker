@@ -4,7 +4,7 @@ import { searchPlaces, reverseGeocode, currentPosition } from './places.js';
 
 // "Where was it?": search for a place, use your current location, or just type a name.
 // get() -> { place_name, lat, lng } (all null when empty).
-export function createPlacePicker() {
+export function createPlacePicker({ label = 'Where was it?' } = {}) {
   let place = null;                                          // { name, lat, lng } (lat/lng null for a name only)
 
   const input = el('input', { type: 'search', placeholder: 'Search for a place…', 'aria-label': 'Search for a place', maxlength: 120, autocomplete: 'off' });
@@ -17,7 +17,7 @@ export function createPlacePicker() {
   const chipText = el('span', { class: 'place-name' });
   const chip = el('div', { class: 'place-chip', hidden: true }, icon('pin', 16), chipText,
     el('button', { class: 'link', type: 'button', 'aria-label': 'Remove the place', onclick: () => clear() }, icon('close', 16)));
-  const element = el('div', { class: 'place-picker' }, el('span', { class: 'place-label' }, 'Where was it?'), chip, finder);
+  const element = el('div', { class: 'place-picker' }, el('span', { class: 'place-label' }, label), chip, finder);
 
   const busy = (on) => { searchBtn.disabled = locateBtn.disabled = on; };
   function render() {

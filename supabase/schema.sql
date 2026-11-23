@@ -92,6 +92,38 @@ create table if not exists public.favourites (
   foreign key (photo_id, activity_id) references public.photos (id, activity_id) on delete cascade
 );
 
+-- Ideas board: either person adds ideas, anyone can vote, comment and move the status.
+create table if not exists public.ideas (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references auth.users default auth.uid(),
+  title text not null check (char_length(title) between 1 and 200),
+  body text check (char_length(body) <= 5000),
+  place_name text check (char_length(place_name) <= 200),
+  lat double precision check (lat between -90 and 90),
+  lng double precision check (lng between -180 and 180),
+  status text not null default 'idea' check (status in ('idea', 'planned', 'done')),
+  moment_id uuid references public.activities on delete set null,   -- the moment an idea turned into
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now(),
+  check ((lat is null) = (lng is null))
+);
+
+create table if not exists public.idea_votes (
+  idea_id uuid not null references public.ideas on delete cascade,
+  user_id uuid not null references auth.users on delete cascade default auth.uid(),
+  created_at timestamptz not null default now(),
+  primary key (idea_id, user_id)
+);
+
+create table if not exists public.idea_comments (
+  id uuid primary key default gen_random_uuid(),
+  idea_id uuid not null references public.ideas on delete cascade,
+  author_id uuid not null references auth.users default auth.uid(),
+  body text not null check (char_length(body) between 1 and 5000),
+  created_at timestamptz not null default now(),
+  edited_at timestamptz
+);
+
 create table if not exists public.comments (
   id uuid primary key default gen_random_uuid(),
   activity_id uuid not null references public.activities on delete cascade,
@@ -131,6 +163,8 @@ create index if not exists photos_activity_id_idx     on public.photos (activity
 create index if not exists comments_activity_created_idx on public.comments (activity_id, created_at);
 create index if not exists feedback_activity_idx on public.feedback_requests (activity_id);
 create index if not exists feedback_recipient_idx on public.feedback_requests (recipient_id, status);
+create index if not exists ideas_created_idx on public.ideas (created_at desc);
+create index if not exists idea_comments_idea_idx on public.idea_comments (idea_id, created_at);
 
 -- ───────────────────────────────────────────────────────────────────
 -- 4. updated_at maintenance (SECURITY INVOKER, no elevated rights)
@@ -178,6 +212,29 @@ begin
   return new;
 end;
 $$;
+
+-- Anyone can change an idea's status; only its author can change its text. Author and dates are fixed.
+create or replace function public.guard_idea_update() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if (select auth.uid()) is distinct from old.author_id
+     and (new.title, new.body, new.place_name, new.lat, new.lng) is distinct from (old.title, old.body, old.place_name, old.lat, old.lng) then
+    raise exception 'only the author can edit an idea''s text' using errcode = '42501';
+  end if;
+  new.author_id := old.author_id;
+  new.created_at := old.created_at;
+  new.updated_at := now();
+  return new;
+end;
+$$;
+
+drop trigger if exists ideas_guard_update on public.ideas;
+create trigger ideas_guard_update before update on public.ideas
+  for each row execute function public.guard_idea_update();
+
+drop trigger if exists idea_comments_set_edited_at on public.idea_comments;
+create trigger idea_comments_set_edited_at before update on public.idea_comments
+  for each row execute function public.set_comment_edited_at();
 
 drop trigger if exists feedback_set_answered on public.feedback_requests;
 create trigger feedback_set_answered before update on public.feedback_requests
@@ -285,6 +342,56 @@ grant select, delete on public.favourites to authenticated;
 grant insert (activity_id, photo_id) on public.favourites to authenticated;
 grant update (activity_id, photo_id) on public.favourites to authenticated;   -- an upsert sets every column it sends
 
+-- Ideas: members read everything; the author adds and deletes their own; anyone can vote, comment
+-- and move the status (the trigger above keeps the text with its author).
+alter table public.ideas enable row level security;
+alter table public.idea_votes enable row level security;
+alter table public.idea_comments enable row level security;
+
+drop policy if exists ideas_select on public.ideas;
+drop policy if exists ideas_insert on public.ideas;
+drop policy if exists ideas_update on public.ideas;
+drop policy if exists ideas_delete on public.ideas;
+create policy ideas_select on public.ideas for select to authenticated using (private.is_member());
+create policy ideas_insert on public.ideas for insert to authenticated
+  with check (private.is_member() and author_id = (select auth.uid()));
+create policy ideas_update on public.ideas for update to authenticated
+  using (private.is_member()) with check (private.is_member());
+create policy ideas_delete on public.ideas for delete to authenticated
+  using (private.is_member() and author_id = (select auth.uid()));
+
+drop policy if exists idea_votes_select on public.idea_votes;
+drop policy if exists idea_votes_insert on public.idea_votes;
+drop policy if exists idea_votes_delete on public.idea_votes;
+create policy idea_votes_select on public.idea_votes for select to authenticated using (private.is_member());
+create policy idea_votes_insert on public.idea_votes for insert to authenticated
+  with check (private.is_member() and user_id = (select auth.uid()));
+create policy idea_votes_delete on public.idea_votes for delete to authenticated
+  using (private.is_member() and user_id = (select auth.uid()));
+
+drop policy if exists idea_comments_select on public.idea_comments;
+drop policy if exists idea_comments_insert on public.idea_comments;
+drop policy if exists idea_comments_update on public.idea_comments;
+drop policy if exists idea_comments_delete on public.idea_comments;
+create policy idea_comments_select on public.idea_comments for select to authenticated using (private.is_member());
+create policy idea_comments_insert on public.idea_comments for insert to authenticated
+  with check (private.is_member() and author_id = (select auth.uid()));
+create policy idea_comments_update on public.idea_comments for update to authenticated
+  using (private.is_member() and author_id = (select auth.uid()))
+  with check (private.is_member() and author_id = (select auth.uid()));
+create policy idea_comments_delete on public.idea_comments for delete to authenticated
+  using (private.is_member() and author_id = (select auth.uid()));
+
+revoke all on public.ideas, public.idea_votes, public.idea_comments from anon, authenticated;
+grant select, delete on public.ideas to authenticated;
+grant insert (title, body, place_name, lat, lng) on public.ideas to authenticated;
+grant update (title, body, place_name, lat, lng, status, moment_id) on public.ideas to authenticated;
+grant select, delete on public.idea_votes to authenticated;
+grant insert (idea_id) on public.idea_votes to authenticated;
+grant select, delete on public.idea_comments to authenticated;
+grant insert (idea_id, body) on public.idea_comments to authenticated;
+grant update (body) on public.idea_comments to authenticated;
+
 -- ───────────────────────────────────────────────────────────────────
 -- 6. Storage: private `photos` bucket, ~5 MB, images only
 --    Path convention: {user_id}/{activity_id}/{uuid}.jpg
@@ -330,7 +437,7 @@ do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['activities', 'comments', 'photos', 'feedback_requests', 'favourites'] loop
+    foreach t in array array['activities', 'comments', 'photos', 'feedback_requests', 'favourites', 'ideas', 'idea_votes', 'idea_comments'] loop
       if not exists (
         select 1 from pg_publication_tables
         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t
