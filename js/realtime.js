@@ -3,7 +3,7 @@ import { supabase } from './supabase.js';
 // Live updates over Supabase Realtime (postgres_changes). Row Level Security applies to what
 // each subscriber receives, so only members get events. Returns a function that stops it.
 //
-// Newer tables (`extras`: [{ topic, table, handler }]) each get their own channel: if one isn't
+// Newer features (`extras`: [{ topic, tables: [[table, handler], …] }]) each get their own channel: if one isn't
 // available (for example the database hasn't been updated yet) it can't break live updates for
 // posts, photos and comments.
 export function startRealtime({ onActivity, onPhoto, onComment, extras = [], onReconnect }) {
@@ -28,6 +28,6 @@ export function startRealtime({ onActivity, onPhoto, onComment, extras = [], onR
   }
 
   const channels = [open('moments', [['activities', onActivity], ['photos', onPhoto], ['comments', onComment]])];
-  for (const { topic, table, handler } of extras) channels.push(open(topic, [[table, handler]]));
+  for (const { topic, tables } of extras) channels.push(open(topic, tables));
   return () => { clearTimeout(resyncTimer); channels.forEach((c) => supabase.removeChannel(c)); };
 }

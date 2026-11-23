@@ -50,11 +50,12 @@ export function setupComposer({ dialog, openButton, onChanged, ctx }) {
   const syncKind = () => { whoLabel.hidden = form.elements.kind.value !== 'group'; };
   form.querySelectorAll('input[name=kind]').forEach((r) => r.addEventListener('change', syncKind));
 
-  let mode = 'new', activityId = null, dirty = false, saved = false;
+  let mode = 'new', activityId = null, dirty = false, saved = false, afterCreate = null;
   const today = () => { const d = new Date(); return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
 
-  function open(nextMode, activity) {
-    mode = nextMode; activityId = activity?.id ?? null; dirty = false; saved = false;
+  function open(nextMode, activity, hooks = {}) {
+    mode = nextMode; activityId = nextMode === 'edit' ? (activity?.id ?? null) : null; dirty = false; saved = false;
+    afterCreate = hooks.afterCreate ?? null;
     form.reset(); picker.reset(); status.textContent = '';
     fields.disabled = false; fields.hidden = false;
     heading.firstChild.textContent = mode === 'edit' ? 'Edit this moment ' : 'Share something new ';
@@ -90,6 +91,10 @@ export function setupComposer({ dialog, openButton, onChanged, ctx }) {
         else { activityId = crypto.randomUUID(); await createActivity({ id: activityId, ...text }, extra); }
         saved = true; dirty = true;
         fields.disabled = true;                            // saved; only photo retries from here
+        if (mode === 'new' && afterCreate) {               // e.g. link the idea this moment came from
+          try { await afterCreate(activityId); } catch (e) { toast(`Saved, but couldn't update the idea: ${e.message}`); }
+          afterCreate = null;
+        }
       }
       const { failed } = await picker.uploadAll(activityId, ctx.me.id);
       if (failed) {
@@ -104,5 +109,9 @@ export function setupComposer({ dialog, openButton, onChanged, ctx }) {
     } finally { submit.disabled = false; cancel.disabled = false; }
   });
 
-  return { edit: (activity) => open('edit', activity) };
+  return {
+    edit: (activity) => open('edit', activity),
+    // A new moment pre-filled from something else (an idea); `afterCreate(newId)` runs once it is saved.
+    newFrom: (prefill, afterCreate) => open('new', prefill, { afterCreate }),
+  };
 }

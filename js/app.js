@@ -8,6 +8,7 @@ import { createFeedback } from './feedback.js';
 import { createTimeline } from './timeline.js';
 import { createMapView } from './mapview.js';
 import { setupMomentDialog } from './momentview.js';
+import { createIdeas } from './ideas.js';
 import { createFeed } from './feed.js';
 import { setupComposer } from './activity.js';
 
@@ -19,6 +20,7 @@ let feed;
 let settings;
 let timeline;
 let mapView;
+let ideasBoard;
 let currentView = 'feed';
 let stopLive = null;
 let lastProfileRefresh = 0;
@@ -27,6 +29,7 @@ function refreshActive() {
   if (appView.hidden) return;
   if (currentView === 'timeline') timeline.show();
   if (currentView === 'map') mapView.show();
+  if (currentView === 'ideas') ideasBoard.show();
 }
 
 function renderWhoami() {
@@ -36,11 +39,12 @@ function renderWhoami() {
 
 // The sections share one page and are addressed by hash (#timeline, #map, #settings), so the
 // browser back button and reloads work.
-const VIEWS = ['feed', 'timeline', 'map', 'settings'];
+const VIEWS = ['feed', 'timeline', 'map', 'ideas', 'settings'];
 const hashView = () => { const v = location.hash.replace('#', ''); return VIEWS.includes(v) ? v : 'feed'; };
 
 function showView(name, force = false) {
   if ((name === 'timeline' || name === 'map') && ctx?.features?.moments2 === false) name = 'feed';   // needs the updated database
+  if (name === 'ideas' && ctx?.features?.ideas === false) name = 'feed';
   const previous = currentView;
   if (name === previous && !force) return;      // e.g. the hash-change that follows our own switch: don't reset a form being typed in
   currentView = name;
@@ -51,6 +55,7 @@ function showView(name, force = false) {
   if (name === 'settings') settings.open(); else if (previous === 'settings') settings.revert();
   if (name === 'timeline') timeline.show();
   if (name === 'map') mapView.show();
+  if (name === 'ideas') ideasBoard.show();
 }
 const route = () => { if (!appView.hidden && ctx) showView(hashView()); };
 function go(name) {
@@ -81,7 +86,7 @@ document.addEventListener('visibilitychange', () => {
 function showLogin(message = '') {
   stopLive?.(); stopLive = null;       // no live events once signed out
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
-  timeline?.clear(); mapView?.clear();
+  timeline?.clear(); mapView?.clear(); ideasBoard?.clear();
   feed?.clear();                       // and nothing left on the page for the next person
   ctx?.feedback?.clear();
   clearUrlCache();                      // signed photo URLs never outlive the session
@@ -106,9 +111,9 @@ async function boot(session) {
 
   const me = profile;                       // same object as in the profiles map (it has the id)
   if (!ctx) {
-    ctx = { me, profiles, features: { moments2: true } };
+    ctx = { me, profiles, features: { moments2: true, ideas: true } };
     feed = createFeed({ container: $('feed'), moreButton: $('more'), ctx });
-    ctx.composer = setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onChanged: () => feed.reload({ silent: true }), ctx });
+    ctx.composer = setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onChanged: () => { feed.reload({ silent: true }); refreshActive(); }, ctx });
     ctx.feedback = createFeedback({ ctx, banner: $('feedback-banner'), onChanged: (id) => feed.refreshFeedback(id) });
     settings = setupSettings({
       ctx,
@@ -119,6 +124,7 @@ async function boot(session) {
     const moment = setupMomentDialog({ ctx, onChanged: () => { feed.reload({ silent: true }); refreshActive(); } });
     timeline = createTimeline({ ctx, view: $('timeline-view'), openMoment: moment.open });
     mapView = createMapView({ ctx, view: $('map-view'), openMoment: moment.open });
+    ideasBoard = createIdeas({ ctx, view: $('ideas-view'), newMoment: (prefill, after) => ctx.composer.newFrom(prefill, after), openMoment: moment.open });
     let refreshTimer = null;
     ctx.dataChanged = () => { clearTimeout(refreshTimer); refreshTimer = setTimeout(refreshActive, 600); };   // live changes while a section is open
   } else {
@@ -128,15 +134,17 @@ async function boot(session) {
   lastProfileRefresh = Date.now();
   await ctx.feedback.load();                // before the feed, so cards render with their requests
   await feed.reload();
-  document.querySelectorAll('#tabs [data-needs="v2"]').forEach((a) => { a.hidden = ctx.features.moments2 === false; });   // the feed load tells us
+  ctx.features.ideas = await ideasBoard.load();                      // false until the database has the ideas tables
+  document.querySelectorAll('#tabs [data-needs]').forEach((a) => { a.hidden = ctx.features[a.dataset.needs === 'v2' ? 'moments2' : a.dataset.needs] === false; });
   showView(hashView(), true);
   stopLive?.();
   stopLive = startRealtime({
     onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment, extras: [
-      { topic: 'moments-feedback', table: 'feedback_requests', handler: ctx.feedback.onEvent },
-      { topic: 'moments-favourites', table: 'favourites', handler: feed.onFavourite },
+      { topic: 'moments-feedback', tables: [['feedback_requests', ctx.feedback.onEvent]] },
+      { topic: 'moments-favourites', tables: [['favourites', feed.onFavourite]] },
+      { topic: 'moments-ideas', tables: [['ideas', ideasBoard.onIdea], ['idea_votes', ideasBoard.onVote], ['idea_comments', ideasBoard.onComment]] },
     ],
-    onReconnect: async () => { refreshProfiles(); await ctx.feedback.load(); feed.reload({ silent: true }); },
+    onReconnect: async () => { refreshProfiles(); await ctx.feedback.load(); ideasBoard.load(); feed.reload({ silent: true }); },
   });
 }
 

@@ -337,3 +337,28 @@ img.avatar { object-fit: cover; background: var(--surface-2); border: 2px solid 
 .moment-sheet::backdrop { background: rgb(0 0 0 / .65); }
 @media (min-width: 640px) { .moment-sheet { margin: auto; border-radius: var(--radius); } }
 #moment-close { margin-bottom: 8px; }
+
+/* Ideas board */
+.idea-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.idea-bar .btn { display: inline-flex; align-items: center; gap: 6px; }
+.idea-list { display: grid; gap: 14px; }
+.idea-card { padding: 14px 16px 12px; border-radius: var(--radius); box-shadow: var(--shadow);
+  border: 1px solid color-mix(in srgb, var(--author-accent, var(--accent)) 35%, var(--border));
+  background: color-mix(in srgb, var(--author-accent, var(--accent)) 9%, var(--surface)); }
+.idea-card[data-status="done"] { opacity: .88; }
+.idea-title { margin: 8px 0 6px; font-family: var(--font-display); font-size: 1.2rem; font-weight: 600; overflow-wrap: anywhere; }
+.idea-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 6px; }
+.vote-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; cursor: pointer; font-weight: 800; color: var(--text);
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; }
+.vote-btn:hover { border-color: var(--highlight); }
+.vote-btn[aria-pressed="true"] { color: #1a1218; background: var(--highlight); border-color: transparent; }
+.vote-btn[aria-pressed="true"] .icon { fill: currentColor; }
+.status-seg { margin-left: auto; display: inline-flex; padding: 3px; gap: 2px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 999px; }
+.status-seg button { padding: 6px 11px; cursor: pointer; font-weight: 800; font-size: .8rem; color: var(--muted); background: none; border: 0; border-radius: 999px; }
+.status-seg button[aria-checked="true"] { color: #1a1218; background: var(--accent); }
+.status-seg button[data-status="planned"][aria-checked="true"] { background: var(--highlight); }
+.status-seg button[data-status="done"][aria-checked="true"] { background: color-mix(in srgb, var(--text) 85%, var(--surface)); }
+.idea-next { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.idea-next .btn { display: inline-flex; align-items: center; gap: 6px; }
+.idea-owner { display: flex; gap: 6px; margin-top: 6px; }
+.idea-owner .link { padding: 4px 4px; font-size: .85rem; }

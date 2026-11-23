@@ -36,6 +36,7 @@
       <a href="#" data-tab="feed" aria-current="page">Moments</a>
       <a href="#timeline" data-tab="timeline" data-needs="v2">Timeline</a>
       <a href="#map" data-tab="map" data-needs="v2">Map</a>
+      <a href="#ideas" data-tab="ideas" data-needs="ideas">Ideas</a>
     </nav>
     <main id="feed-view" class="container">
       <section id="feedback-banner" class="fb-banner" aria-label="Feedback requests for you" hidden></section>
@@ -44,6 +45,7 @@
     </main>
     <main id="timeline-view" class="container" hidden></main>
     <main id="map-view" class="container wide" hidden></main>
+    <main id="ideas-view" class="container" hidden></main>
     <main id="settings-view" class="container" hidden>
       <form id="settings-form" class="settings" autocomplete="off">
         <h2>Settings</h2>
@@ -68,6 +70,20 @@
       </form>
     </main>
     <button id="new-activity" class="fab" type="button" aria-label="New activity">+</button>
+
+    <dialog id="idea-dialog" class="sheet">
+      <form id="idea-form" method="dialog" class="composer">
+        <h2 id="idea-heading">A new idea</h2>
+        <label>What would we like to do? <input name="title" type="text" maxlength="200" placeholder="e.g. Sunrise picnic on Primrose Hill" required></label>
+        <label>Notes <textarea name="body" rows="3" maxlength="5000" placeholder="Details, links, anything to remember (optional)"></textarea></label>
+        <div id="idea-place-slot"></div>
+        <p class="status error" role="status"></p>
+        <div class="row">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Save idea</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="moment-dialog" class="moment-sheet" aria-label="Moment">
       <button id="moment-close" class="btn small" type="button" aria-label="Close">Close</button>
