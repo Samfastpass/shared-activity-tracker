@@ -4,6 +4,7 @@ import { startRealtime } from './realtime.js';
 import { applyTheme, loadProfiles } from './theme.js';
 import { avatar } from './dom.js';
 import { setupSettings } from './settings.js';
+import { createFeedback } from './feedback.js';
 import { createFeed } from './feed.js';
 import { setupComposer } from './activity.js';
 
@@ -59,6 +60,7 @@ function showLogin(message = '') {
   stopLive?.(); stopLive = null;       // no live events once signed out
   if (location.hash) history.replaceState(null, '', location.pathname + location.search);
   feed?.clear();                       // and nothing left on the page for the next person
+  ctx?.feedback?.clear();
   clearUrlCache();                      // signed photo URLs never outlive the session
   applyTheme('');                       // login screen stays neutral
   appView.hidden = true;
@@ -84,6 +86,7 @@ async function boot(session) {
     ctx = { me, profiles };
     feed = createFeed({ container: $('feed'), moreButton: $('more'), ctx });
     ctx.composer = setupComposer({ dialog: $('composer'), openButton: $('new-activity'), onChanged: () => feed.reload({ silent: true }), ctx });
+    ctx.feedback = createFeedback({ ctx, banner: $('feedback-banner'), onChanged: (id) => feed.refreshFeedback(id) });
     settings = setupSettings({
       ctx,
       onBack: () => go('feed'),
@@ -96,11 +99,12 @@ async function boot(session) {
   renderWhoami();
   showView(location.hash === '#settings' ? 'settings' : 'feed');
   lastProfileRefresh = Date.now();
+  await ctx.feedback.load();                // before the feed, so cards render with their requests
   await feed.reload();
   stopLive?.();
   stopLive = startRealtime({
-    onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment,
-    onReconnect: () => { refreshProfiles(); feed.reload({ silent: true }); },
+    onActivity: feed.onActivity, onPhoto: feed.onPhoto, onComment: feed.onComment, onFeedback: ctx.feedback.onEvent,
+    onReconnect: async () => { refreshProfiles(); await ctx.feedback.load(); feed.reload({ silent: true }); },
   });
 }
 

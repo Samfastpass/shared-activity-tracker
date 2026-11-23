@@ -33,6 +33,7 @@
       <button id="sign-out" class="link" type="button">Sign out</button>
     </header>
     <main id="feed-view" class="container">
+      <section id="feedback-banner" class="fb-banner" aria-label="Feedback requests for you" hidden></section>
       <div id="feed" class="feed" aria-live="polite"></div>
       <button id="more" class="btn" type="button" hidden>Load more</button>
     </main>
@@ -60,6 +61,34 @@
       </form>
     </main>
     <button id="new-activity" class="fab" type="button" aria-label="New activity">+</button>
+
+    <dialog id="ask-dialog" class="sheet">
+      <form id="ask-form" method="dialog" class="composer">
+        <h2 id="ask-title">Ask for feedback</h2>
+        <p id="ask-sub" class="muted"></p>
+        <div id="ask-questions" class="q-list"></div>
+        <button id="ask-add" class="link" type="button">+ Add a question</button>
+        <div id="ask-chips" class="chips" aria-label="Question ideas"></div>
+        <p class="status error" role="status"></p>
+        <div class="row">
+          <button class="btn" type="button" data-cancel>Cancel</button>
+          <button class="btn primary" type="submit">Send request</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="answer-dialog" class="sheet">
+      <form id="answer-form" method="dialog" class="composer">
+        <h2 id="answer-title">Your feedback</h2>
+        <p id="answer-sub" class="muted"></p>
+        <div id="answer-fields" class="q-list"></div>
+        <p class="status error" role="status"></p>
+        <div class="row">
+          <button class="btn" type="button" data-cancel>Later</button>
+          <button class="btn primary" type="submit">Send feedback</button>
+        </div>
+      </form>
+    </dialog>
 
     <dialog id="composer" class="sheet">
       <form method="dialog" class="composer">
