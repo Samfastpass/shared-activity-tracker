@@ -45,6 +45,25 @@ create table if not exists public.activities (
   updated_at timestamptz not null default now()
 );
 
+-- Added after the first version (safe on databases created earlier):
+--   kind: a 1:1 moment ("just the two of us") or a group moment; who_came: who else was there;
+--   place_name/lat/lng: where it happened (lat and lng come together or not at all).
+alter table public.activities add column if not exists kind text not null default 'one_to_one';
+alter table public.activities add column if not exists who_came text;
+alter table public.activities add column if not exists place_name text;
+alter table public.activities add column if not exists lat double precision;
+alter table public.activities add column if not exists lng double precision;
+alter table public.activities drop constraint if exists activities_kind_check;
+alter table public.activities add constraint activities_kind_check check (kind in ('one_to_one', 'group'));
+alter table public.activities drop constraint if exists activities_who_came_check;
+alter table public.activities add constraint activities_who_came_check check (who_came is null or char_length(who_came) <= 300);
+alter table public.activities drop constraint if exists activities_place_check;
+alter table public.activities add constraint activities_place_check check (
+  (place_name is null or char_length(place_name) <= 200)
+  and (lat is null or lat between -90 and 90)
+  and (lng is null or lng between -180 and 180)
+  and ((lat is null) = (lng is null)));
+
 create table if not exists public.photos (
   id uuid primary key default gen_random_uuid(),
   activity_id uuid not null references public.activities on delete cascade,
@@ -53,6 +72,24 @@ create table if not exists public.photos (
   width int,
   height int,
   created_at timestamptz not null default now()
+);
+
+-- A photo can only be a favourite of the moment it belongs to (composite key below).
+do $$
+begin
+  if not exists (select 1 from pg_constraint where conname = 'photos_id_activity_key' and conrelid = 'public.photos'::regclass) then
+    alter table public.photos add constraint photos_id_activity_key unique (id, activity_id);
+  end if;
+end $$;
+
+-- Each person can pick one favourite photo per moment; it headlines the moment.
+create table if not exists public.favourites (
+  activity_id uuid not null references public.activities on delete cascade,
+  user_id uuid not null references auth.users on delete cascade default auth.uid(),
+  photo_id uuid not null,
+  created_at timestamptz not null default now(),
+  primary key (activity_id, user_id),
+  foreign key (photo_id, activity_id) references public.photos (id, activity_id) on delete cascade
 );
 
 create table if not exists public.comments (
@@ -228,6 +265,26 @@ grant select, delete on public.feedback_requests to authenticated;
 grant insert (activity_id, recipient_id, questions) on public.feedback_requests to authenticated;
 grant update (answers) on public.feedback_requests to authenticated;
 
+-- Favourites: members read them; each person manages only their own pick.
+alter table public.favourites enable row level security;
+drop policy if exists favourites_select on public.favourites;
+drop policy if exists favourites_insert on public.favourites;
+drop policy if exists favourites_update on public.favourites;
+drop policy if exists favourites_delete on public.favourites;
+create policy favourites_select on public.favourites for select to authenticated
+  using (private.is_member());
+create policy favourites_insert on public.favourites for insert to authenticated
+  with check (private.is_member() and user_id = (select auth.uid()));
+create policy favourites_update on public.favourites for update to authenticated
+  using (private.is_member() and user_id = (select auth.uid()))
+  with check (private.is_member() and user_id = (select auth.uid()));
+create policy favourites_delete on public.favourites for delete to authenticated
+  using (private.is_member() and user_id = (select auth.uid()));
+revoke all on public.favourites from anon, authenticated;
+grant select, delete on public.favourites to authenticated;
+grant insert (activity_id, photo_id) on public.favourites to authenticated;
+grant update (activity_id, photo_id) on public.favourites to authenticated;   -- an upsert sets every column it sends
+
 -- ───────────────────────────────────────────────────────────────────
 -- 6. Storage: private `photos` bucket, ~5 MB, images only
 --    Path convention: {user_id}/{activity_id}/{uuid}.jpg
@@ -273,7 +330,7 @@ do $$
 declare t text;
 begin
   if exists (select 1 from pg_publication where pubname = 'supabase_realtime') then
-    foreach t in array array['activities', 'comments', 'photos', 'feedback_requests'] loop
+    foreach t in array array['activities', 'comments', 'photos', 'feedback_requests', 'favourites'] loop
       if not exists (
         select 1 from pg_publication_tables
         where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = t

@@ -113,3 +113,14 @@ export async function uploadAvatar(userId, blob) {
   if (error) throw error;
   return path;
 }
+
+// Your favourite photo for a moment (one per person); it headlines the moment.
+export async function setFavourite(activityId, photoId) {
+  const { error } = await supabase.from('favourites').upsert({ activity_id: activityId, photo_id: photoId }, { onConflict: 'activity_id,user_id' });
+  if (error) throw error;
+}
+
+export async function clearFavourite(activityId, userId) {
+  const { error } = await supabase.from('favourites').delete().eq('activity_id', activityId).eq('user_id', userId);
+  if (error) throw error;
+}
