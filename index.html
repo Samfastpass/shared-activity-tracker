@@ -32,11 +32,18 @@
       </button>
       <button id="sign-out" class="link" type="button">Sign out</button>
     </header>
+    <nav id="tabs" class="tabs" aria-label="Sections">
+      <a href="#" data-tab="feed" aria-current="page">Moments</a>
+      <a href="#timeline" data-tab="timeline" data-needs="v2">Timeline</a>
+      <a href="#map" data-tab="map" data-needs="v2">Map</a>
+    </nav>
     <main id="feed-view" class="container">
       <section id="feedback-banner" class="fb-banner" aria-label="Feedback requests for you" hidden></section>
       <div id="feed" class="feed" aria-live="polite"></div>
       <button id="more" class="btn" type="button" hidden>Load more</button>
     </main>
+    <main id="timeline-view" class="container" hidden></main>
+    <main id="map-view" class="container wide" hidden></main>
     <main id="settings-view" class="container" hidden>
       <form id="settings-form" class="settings" autocomplete="off">
         <h2>Settings</h2>
@@ -61,6 +68,11 @@
       </form>
     </main>
     <button id="new-activity" class="fab" type="button" aria-label="New activity">+</button>
+
+    <dialog id="moment-dialog" class="moment-sheet" aria-label="Moment">
+      <button id="moment-close" class="btn small" type="button" aria-label="Close">Close</button>
+      <div id="moment-body"></div>
+    </dialog>
 
     <dialog id="ask-dialog" class="sheet">
       <form id="ask-form" method="dialog" class="composer">

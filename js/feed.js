@@ -48,7 +48,7 @@ async function fetchPage(ctx, from) {
   return withPhotoUrls(data);
 }
 
-async function fetchOne(ctx, id) {
+export async function fetchOne(ctx, id) {
   const data = await query(ctx, (cols) => supabase
     .from('activities')
     .select(cols)
@@ -127,6 +127,8 @@ export function createFeed({ container, moreButton, ctx }) {
     timers.set(id, setTimeout(() => { timers.delete(id); refreshNow(id); }, 400));
   }
 
+  const changed = () => ctx.dataChanged?.();
+
   function removeCard(id) {
     const entry = cards.get(id);
     if (!entry) return;
@@ -134,6 +136,7 @@ export function createFeed({ container, moreButton, ctx }) {
     cards.delete(id);
     offset = Math.max(0, offset - 1);
     showEmptyIfNone();
+    changed();
   }
 
   function addNew(a) {
@@ -159,10 +162,12 @@ export function createFeed({ container, moreButton, ctx }) {
       if (!a) return;
       if (cards.has(id)) replaceCard(a);
       else if (addNew(a) && a.author_id !== ctx.me.id) toast(`${name(a.author_id)} shared “${a.title}”`);
+      changed();
     } catch { /* a reload catches up */ } finally { inflight.delete(id); }
   }
 
   function onPhoto(payload) {
+    changed();
     if (payload.eventType === 'INSERT') return scheduleRefresh(payload.new.activity_id);
     if (payload.eventType === 'DELETE') {
       const owner = [...cards.values()].find((e) => e.a.photos.some((p) => p.id === payload.old?.id));
@@ -201,6 +206,7 @@ export function createFeed({ container, moreButton, ctx }) {
   function onFavourite(payload) {
     const id = payload.new?.activity_id ?? payload.old?.activity_id;
     if (id && cards.has(id)) scheduleRefresh(id);
+    changed();
   }
 
   const refreshFeedback = (id) => cards.get(id)?.api.refreshFeedback();
@@ -212,7 +218,7 @@ function emptyState() {
   return el('div', { class: 'empty' }, el('span', { class: 'heart', 'aria-hidden': 'true' }, '♡'), el('p', {}, 'Nothing here yet.'), el('p', { class: 'muted' }, 'Tap + to share your first little moment.'));
 }
 
-function renderCard(a, ctx, { open, remove, refresh }) {
+export function renderCard(a, ctx, { open, remove, refresh }) {
   const author = ctx.profiles.get(a.author_id);
   const mine = a.author_id === ctx.me.id;
   let count = a.comments?.[0]?.count ?? 0;
