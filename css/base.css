@@ -1,5 +1,14 @@
 /* Layout and components. Colours, fonts, radius and shadow come from CSS variables only. */
 *, *::before, *::after { box-sizing: border-box; }
+
+/* Scrollbars follow the theme: thin, in the accent colour, on the page and inside dialogs. */
+:root { color-scheme: dark; }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--accent) 60%, var(--surface-2)) transparent; }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--accent) 60%, var(--surface-2)); border-radius: 999px; border: 2px solid transparent; background-clip: padding-box; }
+::-webkit-scrollbar-thumb:hover { background: var(--accent); background-clip: padding-box; }
+::-webkit-scrollbar-corner { background: transparent; }
 html { -webkit-text-size-adjust: 100%; }
 body {
   margin: 0; min-height: 100dvh; color: var(--text);
@@ -69,6 +78,17 @@ img.avatar { object-fit: cover; background: var(--surface-2); border: 2px solid 
 .comment-head .link { margin-left: auto; padding: 2px 4px; font-size: .8rem; color: var(--muted); font-weight: 600; }
 .comment-body { margin: 4px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .comment-form { display: flex; gap: 8px; }
+.comment-form input { flex: 1; min-width: 0; }
+
+/* The comment button: impossible to miss */
+.comment-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 16px 0 13px; cursor: pointer; font-weight: 800; font-size: .9rem;
+  color: var(--text); background: color-mix(in srgb, var(--highlight) 16%, var(--surface-2)); border: 1px solid color-mix(in srgb, var(--highlight) 60%, var(--border)); border-radius: 999px; }
+.comment-btn:hover { background: color-mix(in srgb, var(--highlight) 26%, var(--surface-2)); }
+.comment-btn[aria-expanded="true"] { background: var(--highlight); color: #1a1218; border-color: transparent; }
+.comment-btn .icon { color: var(--highlight); }
+.comment-btn[aria-expanded="true"] .icon { color: #1a1218; }
+.cb-count { min-width: 22px; padding: 1px 7px; border-radius: 999px; text-align: center; font-size: .78rem; font-weight: 800; color: #1a1218; background: var(--highlight); }
+.comment-btn[aria-expanded="true"] .cb-count { background: #1a1218; color: var(--highlight); }
 
 .empty { text-align: center; padding: 56px 0; }
 .empty .heart { display: block; font-size: 2.2rem; margin-bottom: 6px; }
@@ -79,7 +99,7 @@ img.avatar { object-fit: cover; background: var(--surface-2); border: 2px solid 
 
 /* One-handed: floating button bottom-right, form as a bottom sheet */
 .fab { position: fixed; right: max(16px, env(safe-area-inset-right)); bottom: max(20px, env(safe-area-inset-bottom)); width: 58px; height: 58px; border-radius: 50%; border: 0; font-size: 2rem; font-weight: 600; line-height: 1; cursor: pointer; background: var(--accent); color: var(--on-accent); box-shadow: 0 8px 24px color-mix(in srgb, var(--accent) 40%, transparent), 0 2px 8px rgb(0 0 0 / .4); }
-.sheet { width: min(520px, 100%); margin: auto auto 0; padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; box-shadow: var(--shadow); }
+.sheet { width: min(520px, 100%); max-height: 92dvh; overflow-y: auto; overscroll-behavior: contain; margin: auto auto 0; padding: 22px 18px calc(22px + env(safe-area-inset-bottom)); background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius) var(--radius) 0 0; box-shadow: var(--shadow); }
 .sheet::backdrop { background: rgb(0 0 0 / .6); }
 @media (min-width: 640px) { .sheet { margin: auto; border-radius: var(--radius); } }
 .composer { display: grid; gap: 14px; }

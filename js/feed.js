@@ -4,6 +4,7 @@ import { mountComments } from './comments.js';
 import { deleteActivity } from './activity.js';
 import { signUrls, forgetUrl, deletePhoto } from './photos.js';
 import { openLightbox } from './lightbox.js';
+import { icon } from './icons.js';
 
 const PAGE_SIZE = 10;
 const SELECT = 'id, author_id, title, body, happened_at, created_at, comments(count), photos(id, author_id, storage_path, width, height, created_at)';
@@ -194,14 +195,20 @@ function renderCard(a, ctx, { open, remove, refresh }) {
   const author = ctx.profiles.get(a.author_id);
   const mine = a.author_id === ctx.me.id;
   let count = a.comments?.[0]?.count ?? 0;
-  const countLabel = () => `${count} comment${count === 1 ? '' : 's'}`;
-
-  const toggle = el('button', { class: 'link', type: 'button', 'aria-expanded': 'false' }, countLabel());
+  // An obvious button: speech-bubble icon, "Comment", and how many there are.
+  const badge = el('span', { class: 'cb-count' });
+  const toggle = el('button', { class: 'comment-btn', type: 'button', 'aria-expanded': 'false' }, icon('comment'), el('span', {}, 'Comment'), badge);
   const thread = el('div', { class: 'thread', hidden: true });
   let threadApi = null;
   let mounting = null;
 
-  const setCount = (n) => { count = n; toggle.textContent = countLabel(); };
+  const setCount = (n) => {
+    count = n;
+    badge.textContent = n ? String(n) : '';
+    badge.hidden = !n;
+    toggle.setAttribute('aria-label', n ? `${n} comment${n === 1 ? '' : 's'}, open to read or reply` : 'Add a comment');
+  };
+  setCount(count);
 
   async function show() {
     thread.hidden = false;
@@ -212,8 +219,8 @@ function renderCard(a, ctx, { open, remove, refresh }) {
     await mounting;
   }
 
-  toggle.addEventListener('click', () => {
-    if (thread.hidden) show();
+  toggle.addEventListener('click', async () => {
+    if (thread.hidden) { await show(); threadApi?.focus(); }      // opened by hand: ready to type
     else { thread.hidden = true; toggle.setAttribute('aria-expanded', 'false'); }
   });
 
