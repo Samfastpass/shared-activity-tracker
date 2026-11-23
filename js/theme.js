@@ -9,6 +9,7 @@ export const THEMES = [
 
 export function applyTheme(key) {
   document.body.dataset.theme = key || '';
+  document.documentElement.dataset.theme = key || '';   // the page scrollbar belongs to <html>
 }
 
 // Profiles come with a signed avatarUrl (private bucket, ~1 hour) when they have a picture.

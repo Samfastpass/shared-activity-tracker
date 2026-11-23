@@ -30,8 +30,8 @@ export async function deleteComment(id) {
 // Returns { refresh } so live updates can re-render the list.
 export async function mountComments(container, activityId, ctx, onCount) {
   const list = el('div', { class: 'comment-list' });
-  const input = el('input', { type: 'text', maxlength: 5000, placeholder: 'Add a comment…', 'aria-label': 'Add a comment', required: true });
-  const form = el('form', { class: 'comment-form' }, input, el('button', { type: 'submit', class: 'btn' }, 'Send'));
+  const input = el('input', { type: 'text', maxlength: 5000, placeholder: 'Write a comment…', 'aria-label': 'Write a comment', required: true });
+  const form = el('form', { class: 'comment-form' }, input, el('button', { type: 'submit', class: 'btn primary' }, 'Send'));
   container.append(list, form);
 
   let editing = 0;      // comments currently being edited
@@ -69,7 +69,7 @@ export async function mountComments(container, activityId, ctx, onCount) {
   });
 
   await refresh();
-  return { refresh };
+  return { refresh, focus: () => input.focus() };
 }
 
 function commentRow(c, ctx, h) {
