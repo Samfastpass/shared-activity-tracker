@@ -1,4 +1,4 @@
-# Moments ♥
+# Moments 
 
 A small, private web app for two people to share recent activities, photos and comments.
 
